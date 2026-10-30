@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WuPage Translator",
-  "description": "Translate pages, PDFs, images and video subtitles with configurable translation services and LLM providers.",
+  "description": "One-click page translation with Google and your own OpenAI- or Anthropic-compatible endpoint; permissions are requested only when you click.",
   "version": "1.5.5",
   "icons": {
     "16": "icons/icon-16.png",
@@ -23,35 +23,68 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://*.youtube.com/*", "https://*.youtube-nocookie.com/*", "https://*.bilibili.com/*"],
-      "js": ["video-page-bridge.js"],
-      "all_frames": true,
-      "world": "MAIN",
-      "run_at": "document_start"
-    },
-    {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["frame-bootstrap.js"],
-      "all_frames": true,
-      "match_about_blank": true,
-      "match_origin_as_fallback": true,
-      "run_at": "document_start"
-    }
-  ],
   "options_page": "options.html",
-  "permissions": ["storage", "offscreen", "contextMenus", "activeTab", "webNavigation", "declarativeNetRequestWithHostAccess"],
-  "sandbox": { "pages": ["ocr-sandbox.html"] },
+  "permissions": [
+    "storage",
+    "offscreen",
+    "contextMenus",
+    "activeTab",
+    "scripting",
+    "webNavigation"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*",
+    "file:///*"
+  ],
+  "commands": {
+    "toggle-page-translation": {
+      "suggested_key": {
+        "default": "Alt+Shift+Y"
+      },
+      "description": "翻译全文 / 恢复原文"
+    },
+    "translate-input": {
+      "suggested_key": {
+        "default": "Alt+A"
+      },
+      "description": "翻译当前输入框（LLM）"
+    },
+    "translate-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+Q"
+      },
+      "description": "段落翻译"
+    },
+    "toggle-paragraph-mode": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "开启 / 关闭段落模式"
+    },
+    "cycle-display-mode": {
+      "description": "切换译文显示模式"
+    }
+  },
+  "sandbox": {
+    "pages": [
+      "ocr-sandbox.html"
+    ]
+  },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
     "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval'; child-src 'self'; connect-src 'self' data: chrome-extension:;"
   },
-  "web_accessible_resources": [{ "resources": ["ocr-runtime/*", "frame-content.js", "video-content.js"], "matches": ["<all_urls>"] }],
-  "host_permissions": ["http://*/*", "https://*/*", "file:///*"]
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "ocr-runtime/*",
+        "frame-content.js",
+        "video-content.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
 }

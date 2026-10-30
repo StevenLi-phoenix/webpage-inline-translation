@@ -1,3 +1,4 @@
+import { OCR_MODEL_ORIGINS, requestOrigins } from "./access";
 import { sendRuntimeMessage } from "./messaging";
 import { OCR_DESCRIPTION, type OcrStatus } from "./ocr";
 import { uiIconMarkup } from "./ui-icons";
@@ -132,6 +133,10 @@ export function setupOcrControl(toggle: HTMLButtonElement | HTMLInputElement, on
   button.addEventListener("click", async () => {
     if (acting) return;
     if (!current) { clearTimeout(timer); await refresh(); return; }
+    if (current.state !== "installed" && !await requestOrigins(OCR_MODEL_ORIGINS)) {
+      status.textContent = "没有获得下载 OCR 模型所需的访问权限。";
+      return;
+    }
     acting = true;
     button.disabled = true;
     clearTimeout(timer);

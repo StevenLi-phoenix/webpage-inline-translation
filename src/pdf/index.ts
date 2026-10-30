@@ -1,3 +1,4 @@
+import { fetchWithAccess } from "../shared/access";
 import {
   GlobalWorkerOptions,
   OPS,
@@ -1251,7 +1252,7 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
     timeoutMs
   );
   try {
-    return await fetch(url, { signal: controller.signal });
+    return await fetchWithAccess(url, { signal: controller.signal });
   } catch (error) {
     if (controller.signal.reason instanceof DOMException
       && controller.signal.reason.name === "TimeoutError") {

@@ -19,9 +19,17 @@ import { frameSessions } from "./frame-sessions";
 import type { FrameSessionRequest } from "../shared/frame-session";
 import { readParagraphMode } from "../shared/paragraph-mode";
 import { saveParagraphMode } from "./paragraph-mode";
+import { initCommands } from "./commands";
+import { ensureContent, initPersistentScripts, initTabReinjection } from "./inject";
+import { pickInputProvider, translateInput } from "./input-translation";
+import { assertProviderAccess } from "./permissions";
+import { providerOrigins } from "../shared/access";
 
 frameSessions.install();
 initVideoSettings();
+initCommands();
+initTabReinjection();
+initPersistentScripts();
 
 chrome.tabs?.onRemoved?.addListener(clearVideoTab);
 
@@ -57,6 +65,15 @@ async function handleMessage(request: RuntimeRequest, sender: chrome.runtime.Mes
       return { enabled: await readParagraphMode() };
     case "SET_PARAGRAPH_MODE":
       return saveParagraphMode(request.enabled);
+    case "ENSURE_CONTENT":
+      await ensureContent(request.tabId);
+      return null;
+    case "TRANSLATE_INPUT": {
+      const settings = await getSettings();
+      const origins = providerOrigins(pickInputProvider(settings));
+      if (origins.length) await assertProviderAccess(settings, pickInputProvider(settings)!.id);
+      return translateInput(settings, request.text);
+    }
     case "PAGE_TRANSLATION_STATE_CHANGED":
       await refreshPageContextMenu(sender);
       return null;
@@ -134,6 +151,7 @@ async function handleMessage(request: RuntimeRequest, sender: chrome.runtime.Mes
     }
     case "TRANSLATE_BATCH": {
       const settings = await getSettings();
+      await assertProviderAccess(settings, request.providerId);
       return frameSessions.translate(request, sender, signal => translateWithSettings(settings, request, { signal }));
     }
     case "LOAD_IMAGE": {

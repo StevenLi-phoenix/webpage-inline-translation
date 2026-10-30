@@ -2,7 +2,6 @@ import type { RuntimeRequest, RuntimeResponse } from "../shared/types";
 import type { FrameSessionSnapshot } from "../shared/frame-session";
 import { createDocumentKey, frameExclusion } from "../shared/frame-session";
 import { sampleDocumentText } from "./frame-sample";
-import { initKeyboardShortcuts } from "./keyboard-shortcuts";
 import { sendRuntimeRequest } from "./runtime";
 import { installFrameVisibilityBridge } from "./frame-visibility";
 import { SETTINGS_KEY } from "../shared/defaults";
@@ -10,8 +9,9 @@ import type { ExtensionSettings } from "../shared/types";
 import { initEmbeddedVideoSubtitles } from "./video-bootstrap";
 import { observeParagraphMode } from "../shared/paragraph-mode";
 
-const scope = globalThis as typeof globalThis & { __wupageFrameBootstrap?: boolean };
-const visibility = installFrameVisibilityBridge();
+const scope = globalThis as typeof globalThis & { __wupageFrameBootstrap?: boolean; __wupageVisibility?: ReturnType<typeof installFrameVisibilityBridge> };
+// Injected again on every user action; install the page-level bridges only once.
+const visibility = scope.__wupageVisibility ??= installFrameVisibilityBridge();
 if (window !== window.top && !scope.__wupageFrameBootstrap) {
   scope.__wupageFrameBootstrap = true;
   initEmbeddedVideoSubtitles();
@@ -93,10 +93,6 @@ if (window !== window.top && !scope.__wupageFrameBootstrap) {
     })
       .then(data => respond({ ok: true, data } satisfies RuntimeResponse), error => respond({ ok: false, error: String(error) }));
     return true;
-  });
-  initKeyboardShortcuts(async command => {
-    if (command === "translate-selection") { if (!current || allowed(current)) await (await activate()).selection(); }
-    else await sendRuntimeRequest({ type: "FRAME_FORWARD_SHORTCUT", command });
   });
   document.addEventListener("selectionchange", () => {
     if (worker || current?.settings.selectionTranslation?.enabled === false || !window.getSelection()?.toString().trim() || current && !allowed(current)) return;

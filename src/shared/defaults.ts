@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   cacheEnabled: true,
   contextMenuTranslationEnabled: false,
   imageTranslationEnabled: false,
+  inputTargetLang: "en",
   translateCodeComments: true,
   translationDisplayMode: "bilingual",
   providers: [

@@ -84,18 +84,18 @@ describe("settings category navigation", () => {
     await vi.waitFor(() => expect(query<HTMLElement>("#autoTranslationSettings").hidden).toBe(false));
   });
 
-  it("retains shortcut drafts across categories, saves them in-page and reloads them", async () => {
+  it("retains local shortcut drafts across categories, saves them in-page and reloads them", async () => {
     await mount(); navigate("shortcutSettings");
-    const input = query<HTMLInputElement>("[data-command='toggle-page-translation']");
+    const input = query<HTMLInputElement>("[data-local-command='selection-submit']");
     input.focus();
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "J", code: "KeyJ", altKey: true, shiftKey: true, bubbles: true, cancelable: true }));
-    query<HTMLButtonElement>("[data-shortcut-toggle='toggle-page-translation']").click();
+    query<HTMLButtonElement>("[data-shortcut-toggle='dismiss-overlays']").click();
     navigate("generalSettings"); navigate("shortcutSettings");
     expect(input.value).toBe("Alt＋Shift＋J");
     expect(sendMessage.mock.calls.some(([request]) => request.type === "SAVE_SETTINGS")).toBe(false);
     query<HTMLButtonElement>("#save").click();
-    await vi.waitFor(() => expect(stored.shortcuts?.["toggle-page-translation"]).toBe("Alt+Shift+J"));
-    expect(stored.shortcutEnabled?.["toggle-page-translation"]).toBe(false);
+    await vi.waitFor(() => expect(stored.localShortcuts?.["selection-submit"]).toBe("Alt+Shift+J"));
+    expect(stored.shortcutEnabled?.["dismiss-overlays"]).toBe(false);
     expect(location.hash).toBe("#shortcutSettings");
     expect(document.querySelector("#manageShortcuts")).toBeNull();
   });

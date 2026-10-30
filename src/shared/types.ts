@@ -199,6 +199,8 @@ export interface ExtensionSettings {
   cacheEnabled: boolean;
   contextMenuTranslationEnabled?: boolean;
   imageTranslationEnabled?: boolean;
+  /** Language the input-field translator writes in (the other direction uses `targetLang`). */
+  inputTargetLang?: string;
   translateCodeComments: boolean;
   translationDisplayMode: TranslationDisplayMode;
   providers: ProviderConfig[];
@@ -318,6 +320,8 @@ export type RuntimeRequest =
   | { type: "GET_OCR_STATUS" }
   | { type: "INSTALL_OCR" }
   | { type: "REMOVE_OCR" }
+  | { type: "ENSURE_CONTENT"; tabId: number }
+  | { type: "TRANSLATE_INPUT"; text: string }
   | { type: "TRANSLATE_PAGE" }
   | { type: "OPEN_VIDEO_SUBTITLES"; tabId?: number }
   | { type: "VIDEO_FRAME_STATUS"; videos: number; area: number; playing: boolean }

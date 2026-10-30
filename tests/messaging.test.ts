@@ -16,7 +16,7 @@ describe("page messaging connection errors", () => {
 
   it("treats an absent response as a disconnected page", async () => {
     vi.stubGlobal("chrome", { tabs: { sendMessage: vi.fn().mockResolvedValue(undefined) } });
-    await expect(sendTabMessage(1, { type: "GET_PARAGRAPH_MODE" })).rejects.toThrow("尚未连接到当前网页");
+    await expect(sendTabMessage(1, { type: "GET_PARAGRAPH_MODE" })).rejects.toThrow("无法连接到当前网页");
   });
 
   it("preserves unrelated errors and provider error details", async () => {

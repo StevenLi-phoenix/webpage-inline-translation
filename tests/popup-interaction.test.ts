@@ -31,6 +31,7 @@ describe("popup translation interactions", () => {
     vi.stubGlobal("chrome", {
       runtime: { sendMessage: async (request: RuntimeRequest): Promise<RuntimeResponse> => {
         if (request.type === "GET_SETTINGS") return { ok: true, data: await loadSettings() };
+        if (request.type === "GET_PARAGRAPH_MODE") return { ok: true, data: { enabled: false } };
         if (request.type === "GET_OCR_STATUS") return { ok: true, data: { state: "installed", downloaded: 100, total: 100 } };
         if (request.type === "SAVE_SETTINGS") { await save(request.settings); stored = structuredClone(request.settings); }
         return { ok: true };
@@ -277,28 +278,31 @@ describe("popup translation interactions", () => {
     expect(document.querySelector("#status")?.textContent).toBe("");
   });
 
-  it("keeps paragraph mode selectable after the initial page connection fails", async () => {
-    window.dispatchEvent(new Event("pagehide"));
-    vi.resetModules();
-    document.open(); document.write(readFileSync(resolve(process.cwd(), "popup.html"), "utf8")); document.close();
-    vi.mocked(chrome.tabs.sendMessage)
-      .mockRejectedValueOnce(new Error("Could not establish connection. Receiving end does not exist."))
-      .mockRejectedValueOnce(new Error("Could not establish connection. Receiving end does not exist."));
-    await import("../src/popup/index");
+  it("reads paragraph mode without touching the page and injects the content script on the first action", async () => {
+    const sendMessage = vi.mocked(chrome.tabs.sendMessage);
+    const ensure = vi.fn();
+    const runtimeSend = chrome.runtime.sendMessage;
+    const runtime = chrome.runtime as unknown as { sendMessage: (request: RuntimeRequest) => Promise<RuntimeResponse> };
+    runtime.sendMessage = async (request: RuntimeRequest) => {
+      if (request.type === "ENSURE_CONTENT") { ensure(request.tabId); return { ok: true }; }
+      return (runtimeSend as unknown as typeof runtime.sendMessage)(request);
+    };
     const toggle = document.querySelector<HTMLButtonElement>("#paragraphMode")!;
     await vi.waitFor(() => expect(toggle.disabled).toBe(false));
-    expect(document.querySelector("#status")?.textContent).toContain("刷新网页后重试");
+    expect(sendMessage.mock.calls.some(([, request]) => (request as RuntimeRequest).type === "GET_PARAGRAPH_MODE")).toBe(false);
+    sendMessage.mockRejectedValueOnce(new Error("Could not establish connection. Receiving end does not exist."));
     toggle.click();
     await vi.waitFor(() => expect(toggle.getAttribute("aria-pressed")).toBe("true"));
     await vi.waitFor(() => expect(toggle.disabled).toBe(false));
+    expect(ensure).toHaveBeenCalledWith(4);
     expect(paragraph).toHaveBeenLastCalledWith(true);
-    expect(document.querySelector<HTMLSpanElement>("#paragraphModeHint")!.hidden).toBe(false);
     expect(document.querySelector("#status")?.textContent).toBe("");
-    expect(toggle.hasAttribute("title")).toBe(false);
+    runtime.sendMessage = runtimeSend as unknown as typeof runtime.sendMessage;
   });
 
-  it("gives a refresh hint on a disconnected paragraph attempt and permits another attempt", async () => {
-    paragraph.mockRejectedValueOnce(new Error("Could not establish connection. Receiving end does not exist."));
+  it("gives a refresh hint when the page stays disconnected after injection and permits another attempt", async () => {
+    paragraph.mockRejectedValueOnce(new Error("Could not establish connection. Receiving end does not exist."))
+      .mockRejectedValueOnce(new Error("Could not establish connection. Receiving end does not exist."));
     const toggle = document.querySelector<HTMLButtonElement>("#paragraphMode")!;
     toggle.click();
     await vi.waitFor(() => expect(toggle.disabled).toBe(false));
@@ -373,6 +377,7 @@ describe("popup translation interactions", () => {
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
     save.mockRejectedValueOnce(new Error("设置保存失败"));
     toggle.click();
+    await vi.waitFor(() => expect(document.querySelector("#status")?.textContent).toBe("设置保存失败"));
     await vi.waitFor(() => expect(toggle.disabled).toBe(false));
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
     expect(stored.selectionTranslation?.enabled).toBe(false);

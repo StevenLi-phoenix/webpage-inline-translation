@@ -18,13 +18,15 @@ import { initAutoTranslation } from "./auto-translation";
 import { initSelectionTranslation } from "./selection-translation";
 import { setupAppearance } from "../shared/appearance-runtime";
 import { executeTranslationShortcut } from "./shortcuts";
-import { initKeyboardShortcuts } from "./keyboard-shortcuts";
 import { installFrameRuntime } from "./frame-runtime";
 import { createDocumentKey } from "../shared/frame-session";
 import { initVideoSubtitles, openVideoSubtitles } from "./video-subtitles";
 import { readParagraphMode } from "../shared/paragraph-mode";
 
 
+
+// Probed by the background before it injects this bundle again.
+(globalThis as Record<string, unknown>).__wupageContent = true;
 
 let pageActionVersion = 0;
 
@@ -59,7 +61,6 @@ subscribePageTranslationState(refreshTranslationState);
 initImageTranslation();
 initAutoTranslation();
 initSelectionTranslation();
-initKeyboardShortcuts(executeTranslationShortcut);
 initVideoSubtitles();
 
 chrome.storage.onChanged.addListener((changes, area) => {

@@ -8,6 +8,7 @@ import { showNotice as showShortcutNotice } from "./notice";
 import { getPageTranslationState, hidePageTranslation, setPageTranslationDisplayMode, startPageTranslation } from "./page-translation";
 import { sendRuntimeRequest } from "./runtime";
 import { translateShortcutParagraphs } from "./paragraph-shortcut";
+import { translateFocusedInput } from "./input-translation";
 
 let pageRevision = 0;
 let startingPage = false;
@@ -17,6 +18,7 @@ let modeUpdate = Promise.resolve();
 export async function executeTranslationShortcut(command: TranslationShortcut): Promise<void> {
   try {
     if (command === "toggle-page-translation") await togglePage();
+    else if (command === "translate-input") await translateFocusedInput();
     else if (command === "translate-selection") {
       await translateShortcutParagraphs();
       refreshTranslationState();

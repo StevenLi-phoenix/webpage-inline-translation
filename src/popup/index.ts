@@ -1,4 +1,5 @@
 import { sendRuntimeMessage, sendTabMessage } from "../shared/messaging";
+import { documentOrigin, requestOrigins, requiredOrigins } from "../shared/access";
 import { SOURCE_LANGUAGES, TARGET_LANGUAGES } from "../shared/languages";
 import { TRANSLATION_DISPLAY_MODES } from "../shared/display-modes";
 import type { ExtensionSettings } from "../shared/types";
@@ -166,8 +167,9 @@ async function init(): Promise<void> {
   translationDisplayMode.disabled = false;
   contextMenuTranslationButton.disabled = false;
   imageTranslationButton.addEventListener("click", async () => {
-    setButtonBusy(imageTranslationButton, true);
     const previous = settings.imageTranslationEnabled === true;
+    if (!previous && !await authorize({ ...settings, imageTranslationEnabled: true })) return;
+    setButtonBusy(imageTranslationButton, true);
     try {
       await updatePopupSettings({ imageTranslationEnabled: !previous });
       setStatus(!previous ? "图片翻译已开启，点击图片旁的“译”按钮即可覆盖翻译。" : "图片翻译已关闭，已恢复原图。");
@@ -304,11 +306,21 @@ function syncLanguageValue(select: HTMLSelectElement): void {
   if (label) label.textContent = select.selectedOptions[0]?.textContent ?? select.value;
 }
 
+/** Request host access for the saved settings (plus extra origins) from the current click. */
+async function authorize(projected: ExtensionSettings, ...extra: Array<string | undefined>): Promise<boolean> {
+  const granted = await requestOrigins([...requiredOrigins(projected), ...extra.filter((origin): origin is string => !!origin)]);
+  if (!granted) setStatus("没有获得访问权限，该功能暂不可用。");
+  return granted;
+}
+
 async function togglePageTranslation(): Promise<void> {
   if (!pageTranslationAvailable) {
     setStatus("此页面不支持翻译，请切换到普通网页。");
     return;
   }
+  // Ask for host access first: the browser only shows its prompt while this click is fresh.
+  const chosen = { ...settings, activeProviderId: provider.value || settings.activeProviderId };
+  if (!pageTranslated && !await authorize(chosen, activeTabIsPdf ? documentOrigin(activePageURL) : undefined)) return;
   if (activeTabIsPdf) {
     setPageToggleBusy(true);
     setStatus("正在打开 PDF 并开始翻译...");
@@ -438,11 +450,7 @@ function escapeHtml(value: string): string {
 async function loadParagraphMode(): Promise<void> {
   const revision = paragraphModeRevision;
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab.id) return;
-    const result = await sendTabMessage<{ enabled: boolean }>(tab.id, {
-      type: "GET_PARAGRAPH_MODE"
-    });
+    const result = await sendRuntimeMessage<{ enabled: boolean }>({ type: "GET_PARAGRAPH_MODE" });
     if (revision === paragraphModeRevision) paragraphMode = result.enabled;
     paragraphModeButton.removeAttribute("title");
     updateParagraphModeButton();
@@ -477,6 +485,7 @@ async function toggleAutoTranslation(): Promise<void> {
   if (autoTranslationNotice && status.textContent === autoTranslationNotice) setStatus("");
   autoTranslationNotice = undefined;
   const enabled = autoTranslationButton.getAttribute("aria-pressed") !== "true";
+  if (enabled && !await authorize({ ...settings, autoTranslation: setAutoTranslationEnabled(normalizeAutoTranslation(settings.autoTranslation), true) })) return;
   setButtonBusy(autoTranslationButton, true);
   updateAutoTranslationSiteButton();
   try {
@@ -529,6 +538,7 @@ function updateAutoTranslationSiteButton(): void {
 async function toggleCurrentAutoTranslationSite(): Promise<void> {
   if (addAutoTranslationSiteButton.disabled) return;
   const include = addAutoTranslationSiteButton.getAttribute("aria-pressed") !== "true";
+  if (include && !await authorize({ ...settings, autoTranslation: addAutoTranslationWebsite(settings.autoTranslation, activePageURL) })) return;
   if (autoTranslationNotice && status.textContent === autoTranslationNotice) setStatus("");
   autoTranslationNotice = undefined;
   setButtonBusy(addAutoTranslationSiteButton, true);
@@ -550,6 +560,7 @@ async function toggleCurrentAutoTranslationSite(): Promise<void> {
 
 async function toggleSelectionTranslation(): Promise<void> {
   const enabled = selectionTranslationButton.getAttribute("aria-pressed") !== "true";
+  if (enabled && !await authorize({ ...settings, selectionTranslation: { ...normalizeSelectionTranslation(settings.selectionTranslation), enabled } })) return;
   setButtonBusy(selectionTranslationButton, true);
   try {
     await updatePopupSettings(latest => ({ selectionTranslation: { ...normalizeSelectionTranslation(latest.selectionTranslation), enabled } }));

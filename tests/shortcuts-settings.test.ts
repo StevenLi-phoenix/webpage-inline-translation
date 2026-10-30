@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import manifest from "../public/manifest.json";
 import { canonicalShortcut, DEFAULT_SHORTCUTS, DEFAULT_SHORTCUT_ENABLED, normalizeShortcutEnabled, normalizeShortcuts, shortcutWarning } from "../src/shared/shortcuts";
 import { normalizeSettings } from "../src/shared/settings";
 
@@ -25,7 +24,7 @@ describe("shortcut configuration", () => {
     expect(normalizeShortcuts({ "toggle-page-translation": "Shift+Alt+J", "translate-selection": "",
       "toggle-paragraph-mode": "Alt+Shift+J", "cycle-display-mode": "Ctrl+C" })).toEqual({
       "toggle-page-translation": "Alt+Shift+J", "translate-selection": "", "toggle-paragraph-mode": "",
-      "cycle-display-mode": "Ctrl+C"
+      "cycle-display-mode": "Ctrl+C", "translate-input": "Alt+A"
     });
     for (const value of [null, [], 123, "invalid"]) expect(normalizeShortcuts(value)).toEqual(DEFAULT_SHORTCUTS);
   });
@@ -43,8 +42,5 @@ describe("shortcut configuration", () => {
     }
     for (const value of Object.values(DEFAULT_SHORTCUTS)) expect(shortcutWarning(value)).toBeUndefined();
     expect(shortcutWarning("Alt+Shift+J")).toBeUndefined();
-  });
-  it("removes native commands so browser bindings cannot steal or duplicate custom page shortcuts", () => {
-    expect(manifest).not.toHaveProperty("commands");
   });
 });

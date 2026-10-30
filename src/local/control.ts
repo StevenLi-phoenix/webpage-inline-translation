@@ -1,3 +1,4 @@
+import { LOCAL_MODEL_ORIGINS, requestOrigins } from "../shared/access";
 import { sendRuntimeMessage } from "../shared/messaging";
 import { importModelFiles } from "./model-store";
 import { getLocalModel, getLocalRoute, LOCAL_MODELS, LOCAL_RESOURCE_NOTICE, modelBytes, normalizeLocalLanguage, type LocalModelStatus } from "./models";
@@ -102,7 +103,10 @@ export function setupLocalModelControl(container: HTMLElement, source: string, t
     finally { busy = false; await refresh(); }
   }
 
-  download.addEventListener("click", () => void act(() => sendRuntimeMessage({ type: "INSTALL_LOCAL_MODEL", modelId: select.value })));
+  download.addEventListener("click", () => void act(async () => {
+    if (!await requestOrigins(LOCAL_MODEL_ORIGINS)) throw new Error("没有获得下载翻译模型所需的访问权限。");
+    await sendRuntimeMessage({ type: "INSTALL_LOCAL_MODEL", modelId: select.value });
+  }));
   cancel.addEventListener("click", () => void act(() => sendRuntimeMessage({ type: "CANCEL_LOCAL_MODEL_DOWNLOAD" })));
   remove.addEventListener("click", () => void act(() => sendRuntimeMessage({ type: "REMOVE_LOCAL_MODEL", modelId: select.value })));
   importButton.addEventListener("click", () => input.click());

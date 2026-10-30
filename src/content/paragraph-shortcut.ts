@@ -1,5 +1,5 @@
 import { findTranslatableParagraph } from "./dom";
-import { translateParagraph } from "./paragraph-translation";
+import { NO_SEGMENTS, translateParagraph } from "./paragraph-translation";
 
 const EXCLUDED = "input,textarea,select,button,[contenteditable]:not([contenteditable='false']),[role='textbox'],[role='combobox'],[role='button'],img,video,audio,canvas,svg,#wupage-selection-tools,#wupage-image-tools,#wupage-shortcut-notice";
 
@@ -40,5 +40,14 @@ export async function translateShortcutParagraphs(): Promise<void> {
     if (paragraph) targets.add(paragraph);
   }
   if (!targets.size) throw new Error("请将鼠标移到正文段落，或选中段落文字后再使用段落翻译快捷键。");
-  await Promise.all([...targets].map(target => translateParagraph(target)));
+  // A selection often reaches both a block and blocks nested inside it; translating the outer one
+  // already covers the inner text, so keep only the outermost to avoid doubled translations.
+  const outermost = [...targets].filter(target => ![...targets].some(other => other !== target && other.contains(target)));
+  // One blank block (a rating row, a breadcrumb…) must not mask the paragraphs that did translate.
+  const results = await Promise.allSettled(outermost.map(target => translateParagraph(target)));
+  const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
+  const blank = (reason: unknown) => reason instanceof Error && reason.message === NO_SEGMENTS;
+  if (failures.length === results.length || failures.some(failure => !blank(failure.reason))) {
+    throw failures.find(failure => !blank(failure.reason))?.reason ?? failures[0].reason;
+  }
 }

@@ -22,6 +22,7 @@ All notable changes to this fork are documented here. The format follows [Keep a
 - Input translation no longer picks an untouched default LLM entry without an API key (local/LAN endpoints still work keyless), and its missing-access message points to Settings instead of the popup.
 
 - Translating (popup or shortcut) now requests only the translation service; dictionary hosts are requested by the 划词翻译 switch, which is now off by default.
+- Translating a multi-block selection no longer reports "没有可翻译的段落" when only some blocks are blank, and skips blocks nested inside an already selected block.
 
 ### Removed
 - Floating ball, its menu and the Debug panel (paragraph mode and the transient notice moved to their own modules).

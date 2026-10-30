@@ -83,6 +83,24 @@ describe("paragraph translation shortcut", () => {
     expect(requests()).toHaveLength(1);
   });
 
+  it("translates the paragraphs of a multi-block selection even when one selected block has nothing to translate", async () => {
+    document.body.insertAdjacentHTML("beforeend", '<p id="symbols">★ ★ ★ ★ ★</p>');
+    const range = document.createRange();
+    range.setStartBefore(document.querySelector("#first")!); range.setEndAfter(document.querySelector("#symbols")!);
+    select(range);
+    await expect(translateShortcutParagraphs()).resolves.toBeUndefined();
+    expect(hasTranslationsIn(document.querySelector("#first")!)).toBe(true);
+    expect(hasTranslationsIn(document.querySelector("#second")!)).toBe(true);
+    expect(document.querySelectorAll(".wupage-translation-pending")).toHaveLength(0);
+  });
+  it("does not translate a block twice when the selection reaches both it and a block nested inside", async () => {
+    document.body.insertAdjacentHTML("beforeend", '<section id="card"><p id="inner">Nested text that should appear only once.</p></section>');
+    const range = document.createRange(); range.selectNodeContents(document.querySelector("#card")!);
+    select(range);
+    await translateShortcutParagraphs();
+    expect(requests().flatMap(request => request.texts).filter(text => text.includes("Nested text"))).toHaveLength(1);
+    expect(document.querySelectorAll("#card .wupage-translation")).toHaveLength(1);
+  });
   it.each(["#editable", "#wupage-image-tools p"])("ignores private or extension-owned selections in %s", async selector => {
     const range = document.createRange(); range.selectNodeContents(document.querySelector(selector)!); select(range);
     await expect(translateShortcutParagraphs()).rejects.toThrow("正文段落");

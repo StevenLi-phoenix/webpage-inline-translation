@@ -8,6 +8,8 @@ import { sendRuntimeRequest } from "./runtime";
 import { buildTranslationContext } from "./translation-context";
 import { documentTranslationRevision } from "./translation-lifecycle";
 
+export const NO_SEGMENTS = "此处没有可翻译的段落。";
+
 const pending = new WeakMap<Element, object>();
 
 /** All paragraph entry points share rendering, deduplication, and restoration. */
@@ -26,7 +28,7 @@ export async function translateParagraph(target: Element, action: "toggle" | "tr
     const settings = await sendRuntimeRequest<ExtensionSettings>({ type: "GET_SETTINGS" });
     if (pending.get(target) !== task || revision !== documentTranslationRevision() || !target.isConnected) return;
     const segments = collectParagraphTextSegments(target, settings.translateCodeComments);
-    if (!segments.length) throw new Error("此处没有可翻译的段落。");
+    if (!segments.length) throw new Error(NO_SEGMENTS);
     renderTranslationPlaceholders(segments);
     const data = await sendRuntimeRequest<TranslateBatchResponse>({
       type: "TRANSLATE_BATCH", texts: segments.map(segment => segment.text), preservePlaceholders: true,

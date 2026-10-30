@@ -84,9 +84,9 @@ Chrome 与 Edge 安装包使用相同的 Chromium 构建；较早版本仅提供
 3. 点击「翻译全文」，在当前页面查看译文。
 4. 点击「显示全文」，恢复原文。
 
-初始配置为自动检测源语言、翻译为简体中文，使用 Microsoft 翻译的免费服务，也可切换其他预置服务商。页面默认同时显示原文与译文；滚动或异步加载的新内容会继续识别并翻译。升级扩展后保留已选择的翻译服务。
+初始配置为自动检测源语言、翻译为简体中文，使用 Google 翻译，也可切换到 OpenAI 兼容、Anthropic 兼容服务或本地翻译。页面默认同时显示原文与译文；滚动或异步加载的新内容会继续识别并翻译。升级扩展后保留已选择的翻译服务。
 
-目标语言中的「中文」为简体中文，「繁中」为繁体中文；可在扩展弹窗、悬浮菜单、设置页、视频字幕设置或 PDF 阅读器中选择。可用语言取决于翻译服务，豆包（实验性）和本地实验服务暂不支持繁体中文。
+目标语言中的「中文」为简体中文，「繁中」为繁体中文；可在扩展弹窗、悬浮菜单、设置页、视频字幕设置或 PDF 阅读器中选择。可用语言取决于翻译服务，本地实验服务暂不支持繁体中文。
 
 全文翻译包含网页中嵌入的阅读内容，包括来自其他网站的 iframe。翻译开关、恢复原文、语言和显示模式在整页统一生效；嵌入内容接近可见区域后翻译，隐藏内容显示后继续处理。
 
@@ -306,51 +306,30 @@ macOS 使用 `Option` 对应 `Alt`。快捷键在普通网页正文获得焦点�
 
 ## 翻译服务
 
-Microsoft、Google、腾讯、Yandex、火山和 MyMemory 已预置，默认使用无需密钥的免费服务。在「设置 → 翻译服务」选择服务商后，将「使用方式」切换为「API 服务（自备凭据）」即可填写自己的账号凭据，保存后生效。API 的免费额度与付费规则由服务商决定。
-
-设置页可选中已停用的服务，编辑、保存或手动测试其配置；选中与测试不会自动启用该服务，也不会切换实际翻译所用的服务。停用正在配置的服务后，配置表单继续保留；弹窗、悬浮菜单和 PDF 的翻译服务列表仅显示已启用项。
-
-选择服务商或切换使用方式后，「额度与限制」会显示对应服务的免费或匿名额度、单次请求限制、请求速率、并发和官方来源，并标注更新日期。未公布的项目显示「官方未公布」。插件分块大小与调度并发单独显示；账号剩余额度请在服务商控制台查看。切换模型或服务地址后，说明会同步更新。
-
-| 服务商 | 默认免费服务 | 可配置的 API |
-| --- | --- | --- |
-| Microsoft 翻译 | 浏览器翻译，新安装默认使用 | [Microsoft Translator API（Azure）](https://learn.microsoft.com/azure/ai-services/translator/text-translation/reference/authentication)：API Key、Endpoint，部分资源需要区域 |
-| Google 翻译 | Google Web Translate | [Google Cloud Translation](https://docs.cloud.google.com/translate/docs/reference/rest/v2/translate)：API Key |
-| 腾讯翻译 | TranSmart | [腾讯 TokenHub](https://cloud.tencent.com/document/product/1823/132252)：API Key、Base URL、翻译模型，默认 hy-mt2-lite |
-| Yandex 翻译 | 网页翻译 | [Yandex Cloud Translate](https://aistudio.yandex.ru/en/docs/translate/quickstart)：API Key，按账号要求填写 Folder ID |
-| 火山翻译 | 浏览器翻译 | [火山引擎机器翻译](https://docs.volcengine.com/docs/MachineTranslation/TextTranslationAPI?lang=zh)：Access Key ID、Secret Access Key、区域 |
-| MyMemory | 匿名使用，每天限 5,000 字符 | [MyMemory RapidAPI](https://rapidapi.com/translated/api/mymemory-translation-memory)：订阅对应方案并填写 RapidAPI Key |
-
-切回免费服务会保留已填写的 API 凭据，但不会使用它们。免费服务限流或失败时不会自动切到 API，也不会转发给其他供应商。旧版独立的 Azure、Google Cloud 配置会合并至对应服务商，保留凭据和使用方式；同时存在两套不同订阅时保留独立配置。
+WuPage 提供四类翻译服务，在「设置 → 翻译服务」的下拉框中选择当前服务：
 
 | 服务 | 所需配置 |
 | --- | --- |
-| 豆包（实验性） | 在同一浏览器登录豆包，无需 API Key；目前仅 Chrome / Edge |
-| DeepSeek / Zhipu GLM | 对应平台的 API Key 和模型 |
-| OpenAI Compatible | 服务地址、模型及服务要求的 API Key；支持兼容接口的本地服务 |
-| Anthropic Compatible | 添加自定义 LLM 服务，填写服务地址、模型及所需密钥 |
-| HTTP Template | 接口地址、请求参数和响应格式 |
+| Google 翻译 | 无需密钥，使用 Google 翻译网页接口，新安装默认使用 |
+| OpenAI 兼容 | 服务地址（Base URL）、模型及服务要求的 API Key；适用于 OpenAI、兼容 `/chat/completions` 的网关和本地服务 |
+| Anthropic 兼容 | 服务地址、模型及所需的 API Key；使用 Anthropic Messages 接口 |
 | Firefox 本地翻译（实验） | 预先下载或导入语言模型，无需密钥，准备完成后可离线使用 |
 
-Microsoft、Google、腾讯、Yandex 和火山的免费选项使用浏览器或网页翻译接口，可能受到限流、地区限制或接口变更影响；不可用时可手动切换另一项服务。第三方服务的可用性、用量限制和费用以服务商为准。
+Google 翻译使用网页翻译接口，可能受到限流、地区限制或接口变更影响；不可用时可切换到已配置的 LLM 服务或本地翻译。第三方服务的可用性、用量限制和费用以服务商为准。免费服务限流或失败时，扩展不会自动转发给其他服务。
 
-MyMemory 使用公开翻译 API，适合少量文本。匿名使用每天限 5,000 字符，单次最多 500 字节，长文本会自动分段；默认使用较小分块和单并发。源语言自动检测由浏览器在本机完成，无法可靠识别时需手动选择。额度用完后会提示切换服务，扩展不会自动将文本转发到其他供应商。
+设置页可选中已停用的服务，编辑、保存或手动测试其配置；选中与测试不会自动启用该服务，也不会切换实际翻译所用的服务。通过「启用此服务」开关停用服务后，配置表单继续保留；弹窗和 PDF 的翻译服务列表仅显示已启用项。设置页右侧的「＋」可添加自定义的 OpenAI 兼容或 Anthropic 兼容服务，自定义服务可用「删除」按钮移除。
 
-### 豆包（实验性）
+升级时，旧版本保存的 Microsoft、腾讯、Yandex、火山、MyMemory、豆包、HTTP 模板及 Azure / Google Cloud API 配置会被移除；已填写 API Key 的 DeepSeek 与 Zhipu GLM 配置会转为 OpenAI 兼容服务并保留地址、密钥、模型和提示词。当前使用的服务已不存在时，自动回到 Google 翻译。
 
-1. 在 Chrome / Edge 中打开扩展设置，选择「豆包（实验性）」。
-2. 点击「打开豆包并登录」，在豆包网页中正常登录自己的账号；登录页与扩展须使用同一浏览器资料目录。
-3. 在弹窗、悬浮球或 PDF 工作区选择豆包并开始翻译，扩展会自动准备连接。
+### LLM 服务
 
-「重新检测」仅用于排查连接，会发送一小段示例文字，不读取当前网页内容；正常登录后可直接翻译。
+在「常规」中填写 Base URL、API Key、模型和系统提示词，点击「测试服务」会先保存设置再验证连接。API Key 可留空，用于无需认证的本地服务。
 
-无需填写 API Key 或导入 Cookie。支持网页全文、段落、文本层 PDF，以及本地 OCR 识别出的图片文字。豆包只接收需要翻译的文字，Firefox 暂不支持此服务。
+「性能设置」集中调整通用分块与并发参数、当前服务是否继承通用参数，以及 PDF 翻译范围。切换翻译服务时，当前服务的性能设置随之切换。
 
-源语言使用通用的「自动检测」和手动选择。自动检测使用浏览器的本地语言识别；无法可靠识别时，按提示手动选择。当前豆包接口不支持指定源语言，手动选择无法强制改变服务端对原文语言的判断。
+OpenAI 兼容服务使用 Chat Completions 格式，Base URL 可填写 `https://api.openai.com/v1`、本地服务的 `http://127.0.0.1:端口/v1` 或完整的 `/chat/completions` 地址。Anthropic 兼容服务使用 Messages 格式，只填写主机（如 `https://api.anthropic.com`）时自动补全 `/v1/messages`。
 
-目标语言支持简体中文、英语、日语、韩语、法语、德语、西班牙语和俄语，其他目标语言需手动切换服务。请求会依次排队，较长页面可能需要等待。
-
-登录失效时，重新登录后直接重试翻译；遇到限流时，按提示等待后重试。接口、浏览器 Cookie 策略和服务限制可能影响可用性，持续失败时可选择其他服务。
+LLM 返回值应为与输入顺序一致的 JSON 字符串数组。只有一个输入项时，也兼容单个字符串结果。
 
 ### Firefox 本地翻译（实验）
 
@@ -371,77 +350,6 @@ MyMemory 使用公开翻译 API，适合少量文本。匿名使用每天限 5,0
 
 这是实验功能，复杂内容的译文质量和速度需结合设备评估。暂不支持韩语和繁体中文；缺少模型或语言不支持时，按提示补齐模型或手动切换服务。需要支持 WebAssembly SIMD 的浏览器和设备。
 
-<details>
-<summary>高级配置：LLM 服务、Ollama 与 HTTP 模板</summary>
-
-### LLM 服务
-
-模型右侧的「＋」可为当前服务添加模型或修改当前模型名称，保存后立即选用；自定义模型会随该服务保存在本地，服务地址和 API Key 保留。选择模型后，可点击同一行的「测试服务」验证连接。
-
-「性能设置」集中调整通用分块与并发参数、当前服务是否继承通用参数，以及 PDF 翻译范围。切换翻译服务时，当前服务的性能设置随之切换。
-
-DeepSeek 内置预设使用官方 API，默认模型为 `deepseek-flash`，也可选择 `deepseek-v4-pro`，并默认关闭思考模式以减少翻译延迟。旧 Flash 模型配置会自动迁移为 `deepseek-flash`，模型名称以 [DeepSeek 官方文档](https://api-docs.deepseek.com/zh-cn/) 为准。OpenAI Compatible 适用于 OpenAI、兼容 `/chat/completions` 的网关，以及其他采用相同请求格式的服务。Anthropic Compatible 支持 Messages API 格式。这些 LLM 服务都可以自定义 Base URL、API Key、模型与系统提示词。
-
-LLM 返回值应为与输入顺序一致的 JSON 字符串数组。只有一个输入项时，也兼容单个字符串结果。
-
-#### 自定义请求模板
-
-在「翻译服务 → 高级」中启用「自定义请求模板」，可为当前 LLM 服务设置请求头和请求体参数。支持 OpenAI Compatible、Anthropic Compatible、DeepSeek 与 Zhipu GLM，包括自定义添加的 LLM 服务。点击「测试服务」会先保存设置，再使用当前模板验证请求。
-
-未自定义时，编辑框会展示当前服务的默认文本请求模板：DeepSeek 包含关闭思考的 `thinking` 参数，Anthropic 包含 `system`、`max_tokens` 及自己的认证头，OpenAI Compatible 与智谱使用 Chat Completions 消息格式。认证头根据「常规」中的 API Key 是否填写生成；密钥、模型和提示词使用变量表示。默认展示不会额外保存一份覆盖配置；点击「载入默认模板」会启用自定义并载入可编辑副本，修改后保存。已有模板不会因切换服务或修改常规配置被覆盖。
-
-- **请求头模板**：填写 JSON 对象，在默认请求头上添加或覆盖字段，名称不区分大小写；值为字符串，`null` 删除该请求头。例如需要会话标识的网关可填写 `{"x-opencode-session":"wupage"}`，会话值按网关要求设置。
-- **请求体参数模板**：填写 JSON 对象，与自动生成的请求体逐层合并。对象递归合并，数组与其他值整体替换，`null` 删除字段。留空或 `{}` 沿用默认请求。可调整思考参数、温度、令牌上限，或替换 `messages`。
-- **关闭与恢复**：关闭开关后使用默认请求，已填写模板继续保留；「恢复默认请求」会关闭开关、清除当前服务的覆盖配置，并重新展示默认模板，点击「保存」后生效。
-
-关闭思考的参数由服务商决定，例如以下两种写法应按接口要求选择其一：
-
-```json
-{ "enable_thinking": false }
-```
-
-```json
-{ "thinking": { "type": "disabled" } }
-```
-
-DeepSeek 默认发送 `thinking.type = disabled`，高级模板可将其覆盖为 `enabled`，或用 `{"thinking":null}` 删除。扩展仅解析非流式响应，`stream` 只能设为 `false` 或用 `null` 删除。
-
-模板变量写在 JSON 字符串内，替换时会自动处理引号、换行与反斜杠。支持 `{{model}}`、`{{apiKey}}`、`{{sourceLang}}`、`{{targetLang}}`、`{{context}}`、`{{systemPrompt}}` 和 `{{userPrompt}}`；其中后两项分别为处理后的系统提示词和包含语言、上下文、待翻译文本的默认用户消息。完整的 `"{{texts}}"` 会替换为文本数组，`"{{json texts}}"` 会替换为 JSON 编码后的文本字符串；变量只替换值，不替换字段名。
-
-例如 OpenAI 兼容接口的消息模板：
-
-```json
-{
-  "messages": [
-    { "role": "system", "content": "{{systemPrompt}}" },
-    { "role": "user", "content": "{{userPrompt}}" }
-  ]
-}
-```
-
-替换消息或提示词时，需保留返回 JSON 字符串数组的要求，译文数量和顺序须与输入一致。模板与 API 凭据一同保存在浏览器本地，修改后用于该服务的后续请求；已有页面译文需重新翻译才会更新。
-
-使用 Ollama 时，可填写 `http://[IPv6地址]:11434`、`http://[IPv6地址]:11434/v1` 或完整的 `/v1/chat/completions` 地址，扩展会补全接口并避免重复追加路径。IPv4、IPv6、主机名和自定义端口均支持。OpenAI Compatible 服务默认开启「Ollama 兼容」，处理扩展来源引起的 403，无需修改 `OLLAMA_ORIGINS` 或额外开启选项；旧配置升级后也默认开启，已手动关闭的设置会保留。
-
-兼容处理仅作用于 WuPage 自身发往当前接口的请求，保留 API Key 等请求头，并在请求结束后移除临时规则。如果开启后仍返回 403，请检查服务端认证或反向代理配置；也可按 [Ollama 官方说明](https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama) 配置 `OLLAMA_ORIGINS`。Windows 例如执行 `setx OLLAMA_ORIGINS "chrome-extension://扩展ID"` 后完全退出并重启 Ollama。
-
-### HTTP 模板
-
-「常规」配置请求方法、URL 与响应路径；「高级」配置请求头 JSON 和完整请求体模板。HTTP 模板沿用以下文本替换语法，请求体中的 `{{json texts}}` 不加引号，与 LLM 的 JSON 参数模板不同。
-
-模板中可以使用以下占位符：
-
-| 占位符 | 内容 |
-| --- | --- |
-| `{{targetLang}}` | 目标语言代码 |
-| `{{sourceLang}}` | 源语言代码，自动检测时为 `auto` |
-| `{{texts}}` | 输入文本的直接表示 |
-| `{{json texts}}` | JSON 编码后的输入文本数组 |
-
-「响应路径」必须指向一个字符串数组，数组顺序和数量需要与输入文本一致。
-
-</details>
-
 ## 故障排查
 
 | 现象 | 处理方法 |
@@ -450,8 +358,7 @@ DeepSeek 默认发送 `thinking.type = disabled`，高级模板可将其覆盖�
 | 点击全文翻译无响应 | 确认当前为普通网页；浏览器设置页和扩展内部页面不支持全文翻译。安装或更新后，刷新页面重试 |
 | 翻译请求失败 | 检查网络、服务地址、密钥和用量限制；在弹窗的 Debug 面板查看错误信息 |
 | 默认翻译服务不可用 | 检查网络，或切换到已配置的其他翻译服务 |
-| 豆包提示需要登录 | 在同一浏览器资料目录正常登录豆包，然后重试翻译；也可到设置页重新检测，并检查是否阻止豆包 Cookie |
-| 豆包提示限流、等待或服务拒绝 | 按显示的时间等待后手动检测或重试；持续失败时切换服务，并保留脱敏错误信息 |
+| 本地 Ollama 服务返回 403 | 在服务端设置 `OLLAMA_ORIGINS` 允许扩展来源（如 `chrome-extension://扩展ID`），完全退出并重启 Ollama |
 | 本地翻译提示缺少模型 | 在设置中下载或离线导入对应方向的全部文件；经英语中转时需准备两个方向 |
 | 本地模型下载失败 | 点击继续下载，或使用「网络不畅或离线安装」中的文件链接与离线导入 |
 | 图片翻译开关不可用 | 等待 OCR 模型安装完成；安装失败时点击扳手重试 |
@@ -462,8 +369,6 @@ DeepSeek 默认发送 `thinking.type = disabled`，高级模板可将其覆盖�
 在线翻译请求由扩展直接发送至所选服务商；选择 Firefox 本地翻译时，对应翻译任务的文本在本机处理。划词查词独立使用选中的有道或 Bing 在线词典，仅在点击入口后发送选中文字。WuPage 不提供翻译代理或分析服务；API 凭据、扩展设置和可选翻译缓存保存在浏览器本地。
 
 网页、PDF 及图片中识别出的待翻译文字会交由所选服务商处理。翻译敏感内容前，应确认相应服务商的隐私条款。完整说明见 [隐私政策](PRIVACY.md)。
-
-使用豆包翻译或检测连接时，浏览器会按自身策略向豆包附带已有登录会话。WuPage 不读取、导入、导出或保存登录 Cookie，不保存账号密码，也不将豆包登录信息发送给其他服务。
 
 ## 问题反馈
 

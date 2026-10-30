@@ -59,7 +59,7 @@ describe("options provider model and test state", () => {
     ]);
     expect(select.value).toBe("openai-compatible");
     for (const selector of ["#providerTrigger", "#providerMenu", "#providerAdvancedTab", "#providerUsage",
-      "[data-field='serviceMode']", "[data-field='requestTemplateEnabled']", "[data-field='ollamaCompatibility']",
+      "[data-field='serviceMode']", "[data-field='requestTemplateEnabled']",
       "[data-action='manage-model']"]) {
       expect(document.querySelector(selector), selector).toBeNull();
     }

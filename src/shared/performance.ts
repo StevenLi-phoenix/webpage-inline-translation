@@ -1,4 +1,4 @@
-import type { ExtensionSettings, ProviderConfig } from "./types";
+import type { ExtensionSettings, LlmProviderConfig, ProviderConfig } from "./types";
 
 export interface EffectiveProviderPerformance {
   chunkSize: number;
@@ -11,9 +11,6 @@ export function getEffectiveProviderPerformance(
   providerId = settings.activeProviderId
 ): EffectiveProviderPerformance {
   const provider = settings.providers.find((entry) => entry.id === providerId);
-  if (provider?.type === "doubao-web") {
-    return { chunkSize: 1200, concurrency: 1, performanceMode: "custom" };
-  }
   if (provider?.type === "firefox-local") {
     return { chunkSize: 800, concurrency: 1, performanceMode: "custom" };
   }
@@ -32,11 +29,8 @@ export function getEffectiveProviderPerformance(
   };
 }
 
-export function isLlmProvider(provider: ProviderConfig): boolean {
-  return provider.type === "openai-compatible"
-    || provider.type === "anthropic-compatible"
-    || provider.type === "deepseek"
-    || provider.type === "zhipu-glm";
+export function isLlmProvider(provider: ProviderConfig): provider is LlmProviderConfig {
+  return provider.type === "openai-compatible" || provider.type === "anthropic-compatible";
 }
 
 function clamp(value: number | undefined, min: number, max: number, fallback: number): number {

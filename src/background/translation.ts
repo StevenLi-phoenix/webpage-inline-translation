@@ -14,9 +14,6 @@ import { normalizeProtectedText } from "../shared/protected-text";
 import { translateProtectedText } from "./protected-translation";
 import { assertTranslationResponse, TranslationResponseError } from "./translation-response";
 import { LOCAL_MODELS } from "../local/models";
-import { DOUBAO_PROTOCOL_VERSION } from "../shared/doubao";
-import { withDoubaoDeadline } from "./doubao";
-import { detectSourceLanguage } from "./source-language";
 
 const providerLimiters = new Map<string, ProviderLimiter>();
 const debugTasks: TranslationDebugTask[] = [];
@@ -42,18 +39,6 @@ export async function translateWithSettings(
   if (!providerConfig) throw new Error(`Provider not found: ${providerId}`);
   if (providerConfig.enabled === false) throw new Error(`Provider is disabled: ${providerId}`);
 
-  if (providerConfig.type === "doubao-web") {
-    return withDoubaoDeadline(async (deadlineSignal) => {
-      const requestSignal = signal ? AbortSignal.any([signal, deadlineSignal]) : deadlineSignal;
-      let sourceLang = request.sourceLang ?? "auto";
-      if (sourceLang === "auto" && request.texts.length) {
-        const detected = await detectSourceLanguage(request.texts, requestSignal);
-        if (!detected) throw new Error("无法可靠识别源语言，请在翻译设置中手动选择源语言。");
-        sourceLang = detected;
-      }
-      return translateConfigured(settings, { ...request, sourceLang, context: undefined }, providerConfig, { ...options, signal: requestSignal });
-    }, signal);
-  }
   return translateConfigured(settings, request, providerConfig, options);
 }
 
@@ -73,7 +58,6 @@ async function translateConfigured(
   const cacheProviderId = useCache
     ? `${providerId}.${await sha256(JSON.stringify({ version: 4, provider: providerConfig, sourceLang: request.sourceLang ?? "auto",
       ...(providerConfig.type === "firefox-local" ? { models: LOCAL_MODELS.map(({ id, version }) => [id, version]) } : {}),
-      ...(providerConfig.type === "doubao-web" ? { doubaoProtocolVersion: DOUBAO_PROTOCOL_VERSION, translateService: "1" } : {}),
       ...(request.preservePlaceholders ? { protectedTextVersion: 1 } : {}) }))}`
     : providerId;
   const cachedTranslations = new Map<number, string>();
@@ -106,7 +90,7 @@ async function translateConfigured(
   const translated = await runBatches(
     uncachedTexts,
     performance.chunkSize,
-    providerConfig.type === "doubao-web" ? 10 : isLlmProvider(providerConfig) ? MAX_LLM_BATCH_ITEMS : Number.POSITIVE_INFINITY,
+    isLlmProvider(providerConfig) ? MAX_LLM_BATCH_ITEMS : Number.POSITIVE_INFINITY,
     performance.concurrency,
     (texts) => translateProviderBatchWithRecovery(providerConfig, texts, runProviderTexts)
   );
@@ -401,7 +385,7 @@ async function translateProviderTexts(
       translateProviderTexts(providerConfig, provider, { ...part, preservePlaceholders: false }, part.texts, signal)
     );
   }
-  if (providerConfig.type === "doubao-web" || providerConfig.type === "firefox-local" || isLlmProvider(providerConfig) || !request.context || !texts.length) {
+  if (providerConfig.type === "firefox-local" || isLlmProvider(providerConfig) || !request.context || !texts.length) {
     return translate({ ...request, texts });
   }
 

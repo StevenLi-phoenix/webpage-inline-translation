@@ -295,19 +295,18 @@
               <h2 id="providerSettingsTitle">翻译服务</h2>
             </div>
             <div class="provider-field">
-              <span class="field-label">当前服务</span>
+              <label class="field-label" for="providerSelect">当前服务</label>
               <div class="provider-toolbar">
-                <div id="providerPicker" class="provider-picker">
-                  <button id="providerTrigger" class="provider-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
-                    <span id="providerTriggerIcon" aria-hidden="true"></span>
-                    <span id="providerTriggerLabel" class="provider-trigger-label"></span>
-                    <span class="provider-chevron" data-wupage-icon="arrow-down-03" aria-hidden="true"></span>
-                  </button>
-                  <div id="providerMenu" class="provider-menu" role="listbox" hidden></div>
-                </div>
-                <button id="addProvider" class="icon-button add-provider" type="button" title="添加自定义供应商" aria-label="添加自定义供应商"><span data-wupage-icon="plus" aria-hidden="true"></span></button>
+                <select id="providerSelect"></select>
+                <button id="addProvider" class="icon-button add-provider" type="button" title="添加自定义服务" aria-label="添加自定义服务"><span data-wupage-icon="plus" aria-hidden="true"></span></button>
+                <button id="deleteProvider" class="icon-button provider-delete" type="button" title="删除此自定义服务" aria-label="删除此自定义服务" hidden><span data-wupage-icon="trash" aria-hidden="true"></span></button>
               </div>
             </div>
+            <label class="setting-toggle provider-enabled-toggle">
+              <span>启用此服务</span>
+              <input id="providerEnabled" type="checkbox" role="switch" />
+              <span class="setting-toggle-control" aria-hidden="true"></span>
+            </label>
             <p id="disabledProviderHint" class="hint" role="status" hidden>此服务已停用，仍可编辑、保存和测试配置。启用后才会出现在翻译服务列表中。</p>
             <div id="providerForm"></div>
           </section>
@@ -352,17 +351,11 @@
     <dialog id="providerDialog" class="provider-dialog">
       <form id="providerDialogForm">
         <header class="dialog-header">
-          <h2>添加自定义供应商</h2>
+          <h2>添加自定义服务</h2>
           <button id="cancelProvider" class="dialog-close" type="button" title="关闭" aria-label="关闭"><span data-wupage-icon="cross" aria-hidden="true"></span></button>
         </header>
         <label>显示名称 <input id="customProviderName" type="text" placeholder="例如：公司翻译服务" /></label>
-        <label>供应商类型
-          <select id="customProviderKind">
-            <option value="http">HTTP</option>
-            <option value="llm">LLM</option>
-          </select>
-        </label>
-        <label id="customLlmFormatField" hidden>LLM 接口格式
+        <label>接口格式
           <select id="customLlmFormat">
             <option value="openai">OpenAI 兼容</option>
             <option value="anthropic">Anthropic 兼容</option>
@@ -371,24 +364,6 @@
         <div class="dialog-actions">
           <button type="submit">添加</button>
         </div>
-      </form>
-    </dialog>
-    <dialog id="modelDialog" class="provider-dialog">
-      <form id="modelDialogForm">
-        <header class="dialog-header">
-          <h2>管理模型</h2>
-          <button id="cancelModel" class="dialog-close" type="button" aria-label="关闭"><span data-wupage-icon="cross" aria-hidden="true"></span></button>
-        </header>
-        <label>操作
-          <select id="modelAction">
-            <option value="add">添加模型</option>
-            <option value="edit">修改当前模型</option>
-          </select>
-        </label>
-        <label>模型名称 <input id="customModelName" type="text" required placeholder="填写服务商提供的模型名称" /></label>
-        <p class="hint">添加后会选中该模型；当前服务的地址和密钥会保留。</p>
-        <p id="modelStatus" class="hint" role="status"></p>
-        <div class="dialog-actions"><button type="submit">保存并使用</button></div>
       </form>
     </dialog>
   </body>

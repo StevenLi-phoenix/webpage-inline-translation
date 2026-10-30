@@ -10,10 +10,8 @@ import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { renderUiIcons, uiIconUrl } from "../shared/ui-icons";
 import { DEFAULT_SETTINGS } from "../shared/defaults";
 import { SOURCE_LANGUAGES, TARGET_LANGUAGES } from "../shared/languages";
-import { enhanceProviderSelect } from "../shared/provider-picker";
 import { sendRuntimeMessage } from "../shared/messaging";
 import { ProviderError } from "../shared/errors";
-import { doubaoProviderNotice, isDoubaoProviderUnavailable, syncDoubaoTargetControls } from "../shared/doubao-ui";
 import type {
   ExtensionSettings,
   RuntimeRequest,
@@ -150,7 +148,6 @@ async function init(): Promise<void> {
   renderLanguageOptions(sourceLang, settings.sourceLang, SOURCE_LANGUAGES);
   renderLanguageOptions(targetLang, settings.targetLang, TARGET_LANGUAGES);
   renderProviders();
-  updateDoubaoControls();
   updateTranslationScopeControl();
   bindEvents();
 
@@ -1023,7 +1020,6 @@ async function downloadTranslatedDocument(): Promise<void> {
   fontControl.setExporting(true);
   downloadButton.textContent = "选择导出方式…";
   sourceLang.disabled = targetLang.disabled = provider.disabled = true;
-  enhanceProviderSelect(provider, settings.providers);
   progressBar.style.width = "0%";
   const rasterPages: RasterPdfPage[] = [];
 
@@ -1078,8 +1074,7 @@ async function downloadTranslatedDocument(): Promise<void> {
     downloadButton.classList.remove("is-loading");
     downloadButton.textContent = "下载译文";
     sourceLang.disabled = targetLang.disabled = provider.disabled = false;
-    enhanceProviderSelect(provider, settings.providers);
-    translateButton.disabled = Boolean(translationSession?.busy)
+      translateButton.disabled = Boolean(translationSession?.busy)
       || !pageStates.some((page) => page.blocks.some((block) => block.translatable));
     updateDownloadButtonState();
     if (translationSession?.forDownload) {
@@ -1128,7 +1123,6 @@ async function saveReaderSettings(): Promise<void> {
   };
   // Update provider controls immediately while the latest stored settings are loading.
   settings = { ...settings, ...readerSettings };
-  updateDoubaoControls();
   settings = {
     ...await loadSettings(),
     ...readerSettings
@@ -1150,37 +1144,9 @@ function renderProviders(): void {
     const option = document.createElement("option");
     option.value = item.id;
     option.textContent = item.label;
-    option.disabled = isDoubaoProviderUnavailable(item);
     provider.append(option);
   }
   provider.value = settings.activeProviderId;
-  enhanceProviderSelect(provider, settings.providers);
-}
-
-function updateDoubaoControls(): void {
-  syncDoubaoTargetControls(settings, targetLang);
-  const message = doubaoProviderNotice(settings);
-  let notice = document.getElementById("doubaoProviderNotice");
-  if (!notice && message) {
-    notice = document.createElement("p");
-    notice.id = "doubaoProviderNotice";
-    notice.setAttribute("role", "status");
-    const description = document.createElement("span");
-    description.dataset.role = "doubao-description";
-    const settingsButton = document.createElement("button");
-    settingsButton.type = "button";
-    settingsButton.textContent = "登录与检测";
-    settingsButton.addEventListener("click", () => {
-      void sendRuntimeMessage({ type: "OPEN_OPTIONS_PAGE" }).catch((error: unknown) => showStatus(error instanceof Error ? error.message : String(error), "error"));
-    });
-    notice.append(description, settingsButton);
-    provider.closest("header")?.after(notice);
-  }
-  if (notice) {
-    notice.hidden = !message;
-    const description = notice.querySelector("[data-role='doubao-description']");
-    if (description) description.textContent = message ?? "";
-  }
 }
 
 function renderLanguageOptions(

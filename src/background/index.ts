@@ -7,13 +7,10 @@ import { requestOcr } from "./ocr";
 import { installedRevision } from "../ocr/model-store";
 import { initImageContextMenu } from "./image-context-menu";
 import { initPageContextMenu, refreshPageContextMenu } from "./page-context-menu";
-import { initializeOllamaCompatibility } from "./ollama-compatibility";
 import { requestLocal } from "./local";
 import { lookupDictionary, playDictionaryAudio, stopDictionaryAudio } from "./dictionary";
 import { normalizeSelectionTranslation } from "../shared/dictionary";
 import { cancelVideo, clearVideoTab, initVideoSettings, openVideoInTab, registerVideoFrame, translateVideo } from "./video";
-import { checkDoubao, getDoubaoStatus } from "./doubao";
-import { initializeDoubaoCompatibility } from "./doubao-compatibility";
 import { runtimeErrorResponse } from "../shared/errors";
 import { frameSessions } from "./frame-sessions";
 import type { FrameSessionRequest } from "../shared/frame-session";
@@ -42,8 +39,6 @@ try {
 } catch (error: unknown) {
   console.warn("WuPage image menu:", error);
 }
-void initializeOllamaCompatibility().catch((error: unknown) => console.warn("WuPage Ollama compatibility:", error));
-void initializeDoubaoCompatibility().catch((error: unknown) => console.warn("WuPage Doubao compatibility:", error));
 try {
   initPageContextMenu();
 } catch (error: unknown) {
@@ -77,15 +72,6 @@ async function handleMessage(request: RuntimeRequest, sender: chrome.runtime.Mes
     }
     case "STOP_DICTIONARY_AUDIO":
       return stopDictionaryAudio(`${sender.tab?.id ?? "extension"}:${sender.frameId ?? 0}`);
-    case "GET_DOUBAO_STATUS":
-      return getDoubaoStatus();
-    case "CHECK_DOUBAO": {
-      const settings = await getSettings();
-      if (!settings.providers.some((entry) => entry.type === "doubao-web" && entry.enabled !== false)) {
-        throw new Error("请先启用豆包翻译服务。");
-      }
-      return checkDoubao();
-    }
     case "GET_LOCAL_MODEL_STATUS":
       return requestLocal("status");
     case "INSTALL_LOCAL_MODEL":

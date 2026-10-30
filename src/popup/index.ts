@@ -8,11 +8,9 @@ import { setupAppearance } from "../shared/appearance-runtime";
 import { setImageTranslationToggle, setupOcrControl } from "../shared/ocr-control";
 import { getExtensionDetailsUrl, isLikelyPdfUrl, openPdfWorkspaceInNewTab } from "../pdf/launch";
 import { localProviderNotice } from "../shared/local-notice";
-import { enhanceProviderSelect } from "../shared/provider-picker";
 import { addAutoTranslationWebsite, currentWebsitePattern, excludeAutoTranslationWebsite, hasAutoTranslationWebsite, normalizeAutoTranslation, setAutoTranslationEnabled } from "../shared/auto-translation";
 import { normalizeSelectionTranslation } from "../shared/dictionary";
 import { SETTINGS_KEY } from "../shared/defaults";
-import { doubaoProviderNotice, isDoubaoProviderUnavailable, syncDoubaoTargetControls } from "../shared/doubao-ui";
 import { renderUiIcons, uiIconMarkup } from "../shared/ui-icons";
 import { createSettingsSnapshot } from "../shared/settings-snapshot";
 import { observeParagraphMode } from "../shared/paragraph-mode";
@@ -99,11 +97,9 @@ async function init(): Promise<void> {
   renderLanguageOptions(targetLang, settings.targetLang, TARGET_LANGUAGES);
   provider.innerHTML = settings.providers
     .filter((entry) => entry.enabled !== false)
-    .map((entry) => `<option value="${escapeHtml(entry.id)}" ${isDoubaoProviderUnavailable(entry) ? 'disabled title="此浏览器暂不支持豆包翻译"' : ""}>${escapeHtml(entry.label)}</option>`)
+    .map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.label)}</option>`)
     .join("");
   provider.value = settings.activeProviderId;
-  enhanceProviderSelect(provider, settings.providers);
-  syncDoubaoTargetControls(settings, targetLang);
   updateLocalNotice();
   translationDisplayMode.innerHTML = TRANSLATION_DISPLAY_MODES
     .map((mode) => `<option value="${mode.value}">${mode.label}</option>`)
@@ -213,7 +209,6 @@ async function savePopupSettings(): Promise<void> {
   }
   // Capture the newest control selection while earlier saves are still queued.
   settings = { ...settings, ...patch };
-  syncDoubaoTargetControls(settings, targetLang);
   await updatePopupSettings(patch);
 }
 
@@ -232,11 +227,7 @@ function applyPopupSettings(incoming: ExtensionSettings): void {
   const providers = settings.providers.filter(entry => entry.enabled !== false);
   const signature = JSON.stringify(providers.map(({ id, label, type }) => [id, label, type]));
   if (provider.dataset.options !== signature || provider.value !== settings.activeProviderId) {
-    provider.replaceChildren(...providers.map(entry => {
-      const option = new Option(entry.label, entry.id);
-      option.disabled = isDoubaoProviderUnavailable(entry);
-      return option;
-    }));
+    provider.replaceChildren(...providers.map(entry => new Option(entry.label, entry.id)));
     if (!providers.some(entry => entry.id === settings.activeProviderId)) {
       const unavailable = new Option("当前服务不可用，请选择其他服务", settings.activeProviderId);
       unavailable.disabled = true;
@@ -244,7 +235,6 @@ function applyPopupSettings(incoming: ExtensionSettings): void {
     }
     provider.dataset.options = signature;
     provider.value = settings.activeProviderId;
-    enhanceProviderSelect(provider, settings.providers);
   }
   if (translationDisplayMode.value !== settings.translationDisplayMode) translationDisplayMode.value = settings.translationDisplayMode;
   if (paragraphModeButton.getAttribute("aria-busy") !== "true") updateParagraphModeButton();
@@ -253,7 +243,6 @@ function applyPopupSettings(incoming: ExtensionSettings): void {
   if (autoTranslationButton.getAttribute("aria-busy") !== "true") updateAutoTranslationButton();
   if (selectionTranslationButton.getAttribute("aria-busy") !== "true") updateSelectionTranslationButton();
   if (imageTranslationButton.getAttribute("aria-busy") !== "true") setImageTranslationToggle(imageTranslationButton, settings.imageTranslationEnabled === true);
-  syncDoubaoTargetControls(settings, targetLang);
   updateLocalNotice();
 }
 
@@ -275,7 +264,7 @@ function updatePopupSettings(change: Partial<ExtensionSettings> | ((previous: Ex
 
 function updateLocalNotice(): void {
   let notice = document.getElementById("localProviderNotice");
-  const message = localProviderNotice(settings) ?? doubaoProviderNotice(settings);
+  const message = localProviderNotice(settings);
   if (!notice && message) {
     notice = document.createElement("p"); notice.id = "localProviderNotice";
     notice.setAttribute("role", "status"); notice.style.cssText = "line-height:1.6;font-size:12px;padding:10px;border:1px solid #c7a557;border-radius:8px";

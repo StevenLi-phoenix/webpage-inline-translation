@@ -1,6 +1,7 @@
 import { SETTINGS_KEY } from "../shared/defaults";
 import { getSettings } from "../shared/settings";
 import type { ExtensionSettings, RuntimeRequest, RuntimeResponse } from "../shared/types";
+import { ensureContent } from "./inject";
 
 export const PAGE_MENU_ID = "wupage-toggle-page-translation";
 const LEGACY_MENU_IDS = ["wupage-translate-paragraph", "wupage-restore-paragraph"];
@@ -93,6 +94,8 @@ export async function handlePageMenuClick(info: chrome.contextMenus.OnClickData,
   try {
     // The content action rechecks live state, including pending translations.
     // Always target the whole page, even if the menu was opened inside a frame.
+    // The menu click grants activeTab, so a page nobody has translated yet is injected now.
+    await ensureContent(tab.id);
     const response = await chrome.tabs.sendMessage(tab.id, { type: "EXECUTE_TRANSLATION_SHORTCUT",
       command: "toggle-page-translation" } satisfies RuntimeRequest, { frameId: 0 }) as RuntimeResponse | undefined;
     if (!response?.ok || (response.data as { handled?: unknown } | undefined)?.handled !== true) {

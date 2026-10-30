@@ -1,6 +1,7 @@
 import { getSettings } from "../shared/settings";
 import { installedRevision } from "../ocr/model-store";
 import type { RuntimeRequest, RuntimeResponse } from "../shared/types";
+import { ensureContent } from "./inject";
 
 export const IMAGE_MENU_ID = "wupage-translate-image";
 
@@ -29,6 +30,7 @@ export async function handleImageMenuClick(info: chrome.contextMenus.OnClickData
     await openImageSettings("setup");
     return;
   }
+  await ensureContent(tab.id);
   const response = await chrome.tabs.sendMessage(tab.id, {
     type: "TRANSLATE_CONTEXT_IMAGE", srcUrl: info.srcUrl
   } satisfies RuntimeRequest, { frameId: info.frameId ?? 0 }) as RuntimeResponse | undefined;

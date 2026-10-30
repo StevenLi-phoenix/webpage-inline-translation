@@ -4,6 +4,8 @@ import { getSettings } from "../src/shared/settings";
 import type { ExtensionSettings, RuntimeResponse } from "../src/shared/types";
 import { handlePageMenuClick, initPageContextMenu, PAGE_MENU_ID, refreshPageContextMenu } from "../src/background/page-context-menu";
 
+vi.mock("../src/background/inject", () => ({ ensureContent: vi.fn(async () => undefined) }));
+
 vi.mock("../src/shared/settings", () => ({ getSettings: vi.fn() }));
 let changed: (changes: Record<string, chrome.storage.StorageChange>, area: string) => void;
 let activated: () => void;

@@ -25,7 +25,7 @@ describe("input translation provider", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it("sends one uncached request, asks for the writing language and reads the single result", async () => {
-    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => new Response(JSON.stringify({ choices: [{ message: { content: '["Hello"]' } }] })));
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ choices: [{ message: { content: '["Hello"]' } }] })));
     vi.stubGlobal("fetch", fetchMock);
     const result = await translateInput(settings([llm()]), "你好");
     expect(result).toEqual({ translation: "Hello", providerLabel: "OA" });

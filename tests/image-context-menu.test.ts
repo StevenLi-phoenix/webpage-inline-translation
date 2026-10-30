@@ -6,6 +6,7 @@ import { handleImageMenuClick, IMAGE_MENU_ID, initImageContextMenu } from "../sr
 
 vi.mock("../src/shared/settings", () => ({ getSettings: vi.fn() }));
 vi.mock("../src/ocr/model-store", () => ({ installedRevision: vi.fn() }));
+vi.mock("../src/background/inject", () => ({ ensureContent: vi.fn(async () => undefined) }));
 const info = { menuItemId: IMAGE_MENU_ID, srcUrl: "https://pbs.twimg.com/media/test?format=jpg&name=large", frameId: 3, editable: false };
 const tab = { id: 42 } as chrome.tabs.Tab;
 beforeEach(() => {

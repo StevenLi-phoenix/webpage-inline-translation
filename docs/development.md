@@ -10,7 +10,7 @@
 
 ### 嵌入文档翻译
 
-`src/content/frame-bootstrap.ts` 在匹配的所有框架中登记文档，支持来源回退和特殊 URL，按需加载独立的 `frame-content.js`；顶层 `content.js` 保留唯一的悬浮界面。`src/background/frame-sessions.ts` 通过浏览器提供的标签页、框架和文档身份管理会话，保存会话意图到 session storage，并统一处理开关、语言、显示模式、增量接入、取消和标签页内公平调度。`src/shared/frame-session.ts` 保存协议、状态汇总与排除规则。原有服务商调度和缓存继续生效。
+`src/content/frame-bootstrap.ts` 在匹配的所有框架中登记文档，支持来源回退和特殊 URL，按需加载独立的 `frame-content.js`；顶层 `content.js` 负责页面翻译、段落模式与输入框翻译。`src/background/frame-sessions.ts` 通过浏览器提供的标签页、框架和文档身份管理会话，保存会话意图到 session storage，并统一处理开关、语言、显示模式、增量接入、取消和标签页内公平调度。`src/shared/frame-session.ts` 保存协议、状态汇总与排除规则。原有服务商调度和缓存继续生效。
 
 嵌入帧中的视频由 `video-bootstrap.ts` 独立发现，出现视频后加载 `video-content.js`，不要求先开启整页或段落翻译。原有 `paragraph-frame.js` 已由这两条按需入口取代。字幕任务、手动翻译和网页预取共用服务商及全局并发限制，优先级依次降低，同级任务保持先进先出；字幕仍不写入持久缓存。
 
@@ -110,19 +110,16 @@ npm test           # 运行 Vitest 测试
 npm run build      # 生成生产构建到 dist/
 ```
 
-### 快捷键实现与验证
+### 按需注入、权限与快捷键
 
-`shortcutWarning()` 对常用浏览器、编辑和 Ctrl＋Alt 组合给出非阻断警告。警告只显示在对应录入框下方，不设置 `aria-invalid`，不会阻止保存或在设置规范化时重置绑定；重开设置页仍会显示。格式错误和扩展内重复绑定保持原有校验。
+清单不声明 `content_scripts` 和 `host_permissions`，只有 `activeTab`、`scripting`、`webNavigation` 等固有权限与 `optional_host_permissions`。
 
-`shortcutEnabled` 为四项翻译快捷键与四项局部操作分别保存布尔开关。缺失的旧设置默认启用，原先清空的翻译键迁移为关闭；关闭只改变开关，不清空 `shortcuts`。设置页将两者作为同一份草稿保存，恢复全部默认会重置按键及开关。内容脚本、悬浮球、段落点击和划词卡片通过同一个存储事件同步配置；局部键关闭后仍可使用鼠标按钮。
-
-快捷键保存在扩展设置的 `shortcuts` 中，在设置页直接录入、清空或恢复默认，与其他表单字段一起保存。`src/shared/shortcuts.ts` 统一定义默认值、组合键规范化、事件匹配和已知冲突校验。未配置的新字段补齐默认值，明确清空的值保留为空，非法或重复绑定在读取设置时修复。Chrome / Edge 不提供扩展内改写浏览器快捷键的接口，因此不再声明 Manifest `commands`，避免旧原生绑定与自定义按键同时触发。相关接口范围参见 [Chrome Commands API](https://developer.chrome.com/docs/extensions/reference/api/commands)。
-
-`src/content/keyboard-shortcuts.ts` 在顶层网页捕获按键，根据已加载的配置触发 `src/content/shortcuts.ts` 中共用的翻译动作。使用 `KeyboardEvent.code` 匹配字母和数字物理键；忽略 IME、AltGr、输入和编辑区域、已处理事件与重复执行；仅在匹配时阻止网页默认行为。配置变更通过存储事件同步，初始读取不会覆盖较新的存储变更。快捷键作用于普通网页及已接入的嵌入框架正文，不作用于地址栏或 PDF 查看器。全文开始前的异步读取可被再次按键取消，过期结果不覆盖恢复原文后的提示，连续切换显示模式按保存顺序处理。
-
-段落翻译快捷键复用 `src/content/paragraph-translation.ts` 的原位翻译与恢复逻辑。`src/content/paragraph-shortcut.ts` 将选区内的文字映射为完整段落并去重，无选区时使用鼠标所在或获得焦点的正文段落；不依赖段落模式、右键翻译或划词翻译开关。配置键沿用 `translate-selection`，保留已有自定义按键与开关。
-
-相关单元回归覆盖录入、取消、清空、默认值、重复及保留组合键校验、设置保存和分类草稿、即时改键与输入保护、快速启停、显示模式顺序和段落翻译。
+- `src/background/inject.ts` 的 `ensureContent(tabId)` 先探测 `globalThis.__wupageContent`，缺失才用 `chrome.scripting.executeScript` 注入 `content.js`，并向所有框架注入（幂等的）`frame-bootstrap.js`；触发点是弹窗动作（`src/shared/messaging.ts` 的 `sendTabMessage` 在无接收方时发送 `ENSURE_CONTENT` 并重试，`GET_TRANSLATION_STATE` 等纯查询不会注入）、`chrome.commands` 快捷键（`src/background/commands.ts`）和右键菜单。已操作过的标签页记录在 `chrome.storage.session`，主框架加载完成后重新注入。
+- 自动翻译站点与视频站点是唯一的常驻注入：`syncPersistentScripts()` 只为用户已授权的匹配模式用 `registerContentScripts` 登记 `content.js`、`frame-bootstrap.js` 和 YouTube / 哔哩哔哩的 MAIN 世界字幕桥，设置变化和权限增减时重新登记。
+- `src/shared/access.ts` 汇总各功能需要的来源（翻译服务、词典、模型下载、图片、站点规则）。弹窗、设置页和模型安装按钮在点击处理的最前面调用 `requestOrigins()`，扩展页面下载用 `fetchWithAccess()`；后台翻译请求在 `assertProviderAccess()` 中先检查授权，缺失时返回「需要先授权访问…」而不是不透明的 CORS 失败。
+- 翻译快捷键是 `manifest.commands`（浏览器只允许 4 个预设按键，`cycle-display-mode` 无默认）。`EXECUTE_TRANSLATION_SHORTCUT` 的 `translate-input` 由 `src/content/input-translation.ts` 处理：读取聚焦的 input / textarea / contenteditable（含选区），向后台发送 `TRANSLATE_INPUT`，经 `execCommand("insertText")` 写回以保留撤销栈。后台 `src/background/input-translation.ts` 选取活动的或第一个可用的 LLM 服务，使用专用提示词，一次不缓存的请求。
+- 页面内不再监听全局翻译按键；`localShortcuts`（段落点击修饰键、划词提交、关闭卡片）仍由内容脚本处理。设置页的「快捷键」只读展示 `chrome.commands.getAll()` 的实际绑定并链接到浏览器的快捷键页面。
+- 验证：`tests/access.test.ts`、`tests/background-inject.test.ts`、`tests/input-translation.test.ts`、`tests/background-input.test.ts`、`tests/browser-manifest.test.ts` 和弹窗、消息、快捷键设置相关单元测试。尚未在真实浏览器中验证注入、`permissions.request` 弹窗与 `chrome.commands` 的端到端流程，`scripts/test-*.mjs` 需要先移植到新的注入方式。
 
 `npm run test:shortcuts` 在构建后加载真实扩展，使用独立浏览器资料和本地模拟服务验证设置页录入与保存、无需刷新网页的改键和停用、实际键盘事件触发全文与段落翻译、译文模式复用、段落模式、输入保护与窄屏布局。支持 `PLAYWRIGHT_MODULE`、`CHROME_TEST_BROWSER` 和 `PDF_TEST_BROWSER`，报告及截图写入 `.npm-cache/shortcuts/`。浏览器和系统保留快捷键不由网页拦截，跨系统组合仍需在目标环境确认。
 
@@ -162,7 +159,7 @@ npx web-ext lint --source-dir dist-firefox
 ```text
 src/
 ├── background/  # 服务商适配、任务调度、缓存与消息处理
-├── content/     # 网页文本识别、译文渲染、段落模式与悬浮球
+├── content/     # 网页文本识别、译文渲染、段落模式与输入框翻译
 ├── local/       # Bergamot 模型目录、续传缓存、离线导入、Worker 与管理界面
 ├── options/     # 设置与服务商配置界面
 ├── pdf/         # PDF 加载、布局、编辑、渲染与导出
@@ -194,8 +191,8 @@ npm run test:page
 
 需要可导入的 Playwright（也可用 `PLAYWRIGHT_MODULE` 指定模块路径）。Chrome 通过扩展调试接口加载 `dist/`，报告与截图写入 `.npm-cache/chrome-translation/`。
 
-- 自动翻译由 `src/shared/auto-translation.ts` 归一化并匹配站点规则，`src/content/auto-translation.ts` 在前台 HTML 页面触发现有渐进翻译。弹窗和悬浮菜单的「＋」复用站点添加逻辑，只从 HTTP/HTTPS 地址提取域名和非默认端口，不保留路径、查询参数或片段；已有整站规则会复用，同站点的已停用规则会启用。「✓」再次点击后将当前域名写入可选的 `excludedSites`，优先于站点及语言规则；保留正向规则以继续服务其他子域名，重新加入时清除该域名的排除。设置页草稿读写保留排除项，并可单独取消排除。语言检测仅使用本机浏览器接口；路由、配置与手动停止会使过期检测结果失效。回归覆盖域名边界、通配与路径、旧设置默认关闭、动态内容、手动停止和单页导航。
-- `npm run test:auto`：构建后加载实际扩展，使用本地网页和模拟翻译服务验证规则保存、窄屏、自动触发、手动恢复原文、单页导航、目标语言跳过和异步加载的正文；另检查弹窗和悬浮菜单加入、排除及重新加入当前网站、重复规则限制、设置页持久化与保存后保留排除项、排除优先于语言规则且刷新后有效，以及新增站点立即触发翻译。报告保存在 `.npm-cache/auto-translation/`。
+- 自动翻译由 `src/shared/auto-translation.ts` 归一化并匹配站点规则，`src/content/auto-translation.ts` 在前台 HTML 页面触发现有渐进翻译。弹窗的「＋」复用站点添加逻辑，只从 HTTP/HTTPS 地址提取域名和非默认端口，不保留路径、查询参数或片段；已有整站规则会复用，同站点的已停用规则会启用。「✓」再次点击后将当前域名写入可选的 `excludedSites`，优先于站点及语言规则；保留正向规则以继续服务其他子域名，重新加入时清除该域名的排除。设置页草稿读写保留排除项，并可单独取消排除。语言检测仅使用本机浏览器接口；路由、配置与手动停止会使过期检测结果失效。回归覆盖域名边界、通配与路径、旧设置默认关闭、动态内容、手动停止和单页导航。
+- `npm run test:auto`：构建后加载实际扩展，使用本地网页和模拟翻译服务验证规则保存、窄屏、自动触发、手动恢复原文、单页导航、目标语言跳过和异步加载的正文；另检查弹窗加入、排除及重新加入当前网站、重复规则限制、设置页持久化与保存后保留排除项、排除优先于语言规则且刷新后有效，以及新增站点立即触发翻译。报告保存在 `.npm-cache/auto-translation/`。
 - `npm run test:spa`、`npm run test:spa:edge`、`npm run test:spa:firefox`：构建对应浏览器产物后，使用独立浏览器和本地帖子页面验证站点规则与语言规则下的连续切换、前进后退、仅改变地址时的路径边界、延迟响应、原文节点复用、动态回复、手动还原与重译，以及空白加载页的后续翻译。站点规则继续匹配时保留现有监听；需要重新判断语言时等待后台停止完成，内部暂停不视为用户手动还原。中断、仍在翻译与暂时没有正文分别显示对应状态。报告与截图保存在 `.npm-cache/spa-translation-<browser>/`，支持 `PLAYWRIGHT_MODULE`、`CHROME_TEST_BROWSER`、`EDGE_TEST_BROWSER` 和 `FIREFOX_BINARY`。
 - 翻译服务只有四类：`google-web-translate`（网页接口，无凭据）、`openai-compatible`、`anthropic-compatible`（Base URL、API Key、模型、系统提示词）与 `firefox-local`。`src/background/providers.ts` 包含全部适配与图片区域翻译（`translateImageRegions`，OpenAI 使用 `image_url`，Anthropic 使用 base64 `image` 块）。`normalizeSettings` 在读取旧设置时丢弃已移除类型，将已填写 API Key 的 `deepseek` / `zhipu-glm` 转为 `openai-compatible`，并在当前服务消失时回到 Google。
 - `npm run test:page`：先运行 `npm run build`，再使用可选的 Playwright 与 Chromium 加载真实 MV3 扩展。支持 `PLAYWRIGHT_MODULE` 与 `PDF_TEST_BROWSER` 环境变量。
@@ -203,7 +200,6 @@ npm run test:page
 - YouTube 新旧评论结构按整条正文翻译，双语译文另起一行；同时检查短评论、带链接的富文本、长译文自动折行及网页 `white-space: nowrap` 的继承隔离。
 - 同时检查 `dist/content.js` 能作为普通脚本解析，防止公共工具被拆成模块导入而导致内容脚本无法加载。报告保存在 `.npm-cache/page-translation/report.json`。
 - `npm run test:cards`：使用实际扩展和本地模拟服务，检查中英文界面下的混合语言卡片。覆盖 Flex/Grid 字段分离、标题字号与字重、作者链接、两种窗口宽度、三种显示模式和清除还原；匿名服务将整批判为目标语言时，未翻译项应独立重试。报告保存在 `.npm-cache/card-layout/`。
-- `npm run test:floating`：加载实际扩展，覆盖真实指针的 500 毫秒悬停延迟、离开取消、拖动与位置保存、悬浮球和弹窗的翻译中停止、迟到响应、原译文切换与缓存复用、动态列表、状态同步、缓存清理、失败重试、Debug、设置入口、键盘操作和小窗口。另检查紧凑菜单布局、划词开关与弹窗的双向同步、缺少 OCR 模型时禁用图片翻译，以及说明弹层的边界。报告保存在 `.npm-cache/floating-interactions/`。
 - `npm run test:paragraph-mode`（Chrome）和 `npm run test:paragraph-mode:edge`：在加载扩展前先打开本地网页，验证暂时未连接不会禁用「段落翻译」按钮，提示刷新后可在同一弹窗重试，并检查顶层与嵌入文档的 Ctrl 点击翻译、恢复和退出同步。弹窗与悬浮菜单使用独立按钮启停段落模式，显示方式下拉框仅保留三种译文样式，切换样式保持段落模式；同时检查窄弹窗的按钮排版。使用独立配置和本地模拟服务，支持 `PLAYWRIGHT_MODULE`、`CHROME_TEST_BROWSER`、`EDGE_TEST_BROWSER`；报告和截图按浏览器保存到 `.npm-cache/paragraph-mode/`。
 - 段落模式通过 `src/shared/paragraph-mode.ts` 监听独立的本地共享开关，由后台串行保存。标签页会话只负责全文翻译，不持有段落模式；初次读取与页面从历史缓存恢复时均防止旧值覆盖新的开关事件。嵌入文档保留既有排除规则，并按需激活段落处理。`npm run test:paragraph-sync` 及其 `:edge`、`:firefox` 版本使用多标签页与本地模拟服务，检查双向同步、跨域帧与排除项、新页面、刷新、晚加载帧、已有段落/全文译文保留、快速切换及旧设置保存，报告在 `.npm-cache/paragraph-sync/`。
 - 正文和标题译文继承原文字体与行高。需要放在原文外侧以避开截断的结果，由 `src/content/translation-typography.ts` 同步字体；仅在存在此类结果时监听尺寸、祖先样式和字体加载变化，清除结果后释放监听。`npm run test:paragraph-typography` 及其 `:edge`、`:firefox` 版本使用真实键盘快捷键与本地模拟译文，检查多行标题、富文本、手动换行、两种窗口宽度、网页样式变化、三种显示模式及原文恢复；缩放不得重新请求翻译。加 `-- --live` 还会检查 Rust 官网，报告保存在 `.npm-cache/paragraph-typography/`。
@@ -232,7 +228,7 @@ npm run test:page
 
 `src/shared/appearance.ts` 管理内置方案、自定义颜色校验和明暗方案选择；`appearance-runtime.ts` 监听系统明暗及本地设置变化，通过 `--wp-*` 变量应用到扩展界面。网页中只注入扩展专用变量，不修改宿主页面的 `color-scheme`；划词卡片在 Shadow DOM 中继承同一组变量。`src/options/appearance.ts` 保存独立表单草稿，与其他设置分类一起提交。
 
-配色按界面、悬浮球、译文与段落、划词翻译、图片入口分组。`src/shared/translation-colors.ts` 共用网页背景识别和对比度处理；内容脚本在方案或系统明暗变化时原地更新已渲染的双色译文，包括段落翻译和图片段落，不重新发送翻译请求。旧自定义方案缺少组件颜色时从原有界面色补齐。
+配色按界面、译文与段落、划词翻译、图片入口分组。`src/shared/translation-colors.ts` 共用网页背景识别和对比度处理；内容脚本在方案或系统明暗变化时原地更新已渲染的双色译文，包括段落翻译和图片段落，不重新发送翻译请求。旧自定义方案缺少组件颜色时从原有界面色补齐。
 
 `appearance.floatingOpacity` 独立于配色方案，保存 0–100 的整数百分比，旧配置默认 100。滑块与数字输入共用草稿并即时更新预览，数值超出范围或为空时阻止保存；导入设置会将有限数值取整并限制范围。运行时映射为 `--wp-floating-opacity`，作用于球体和预览，拖动时以该值乘原有的 0.92 系数，展开菜单保持正常不透明度。
 

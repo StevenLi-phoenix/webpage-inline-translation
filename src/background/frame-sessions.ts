@@ -123,9 +123,6 @@ export class FrameSessionManager {
         .map(frame => this.send(tabId, frame, { type: "FRAME_SAMPLE" }, 1500).then(value => typeof value === "string" ? value : "").catch(() => "")));
       return samples.filter(Boolean);
     }
-    if (request.type === "FRAME_FORWARD_SHORTCUT") {
-      return this.api.tabs.sendMessage(tabId, { type: "EXECUTE_TRANSLATION_SHORTCUT", command: request.command }, { frameId: 0 });
-    }
     if (request.type === "FRAME_SESSION_ACTION") {
       const version = ++tab.controlVersion;
       if (request.action === "start") {

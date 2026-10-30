@@ -1,3 +1,4 @@
+import { providerOrigins, requestOrigins, requiredOrigins } from "../shared/access";
 import { BUILT_IN_PROVIDER_IDS, DEFAULT_SETTINGS } from "../shared/defaults";
 import { normalizeFrameTranslation } from "../shared/frame-session";
 import { SOURCE_LANGUAGES, TARGET_LANGUAGES } from "../shared/languages";
@@ -22,6 +23,7 @@ const shortcutControls = setupShortcutSettings(query<HTMLElement>("#shortcutSett
 const appearanceControls = setupAppearanceControls(query<HTMLElement>("#appearanceSettings"));
 
 const targetLang = query<HTMLSelectElement>("#targetLang");
+const inputTargetLang = query<HTMLSelectElement>("#inputTargetLang");
 const sourceLang = query<HTMLSelectElement>("#sourceLang");
 const chunkSize = query<HTMLInputElement>("#chunkSize");
 const concurrency = query<HTMLInputElement>("#concurrency");
@@ -123,6 +125,7 @@ function render(): void {
   frameTranslationEnabled.checked = frameTranslation.enabled;
   frameTranslationExcluded.value = frameTranslation.excludeMatches.join("\n");
   renderLanguageOptions(targetLang, settings.targetLang, TARGET_LANGUAGES);
+  renderLanguageOptions(inputTargetLang, settings.inputTargetLang ?? "en", TARGET_LANGUAGES);
   renderLanguageOptions(sourceLang, settings.sourceLang, SOURCE_LANGUAGES);
   chunkSize.value = String(settings.chunkSize);
   concurrency.value = String(settings.concurrency);
@@ -413,9 +416,12 @@ function createCustomProviderId(kind: string): string {
 async function save(showSavedStatus = true): Promise<void> {
   try {
     settings = readSettingsFromForm();
+    // Ask while the click is fresh: the active service, every enabled LLM endpoint and the opted-in sites.
+    const granted = await requestOrigins([...new Set([...requiredOrigins(settings), ...settings.providers
+      .filter(provider => provider.enabled !== false).flatMap(provider => providerOrigins(provider))])]);
     await persistSettings(false);
     render();
-    if (showSavedStatus) setStatus("已保存。");
+    if (showSavedStatus) setStatus(granted ? "已保存。" : "已保存，但未授予访问权限，相关服务暂时无法使用。");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error));
     throw error;
@@ -454,6 +460,8 @@ async function testProvider(): Promise<void> {
   };
   try {
     settings = readSettingsFromForm();
+    const granted = await requestOrigins(providerOrigins(settings.providers.find(provider => provider.id === run.providerId)));
+    if (!granted) { report("需要先授予该服务的访问权限才能测试。"); return; }
     report("测试中...");
     await persistSettings(false);
     if (!isCurrent()) return;
@@ -503,6 +511,7 @@ function readSettingsFromForm(): ExtensionSettings {
     frameTranslation: normalizeFrameTranslation({ enabled: frameTranslationEnabled.checked,
       excludeMatches: frameTranslationExcluded.value.split(/\r?\n/u) }),
     targetLang: targetLang.value.trim() || "zh-CN",
+    inputTargetLang: inputTargetLang.value.trim() || "en",
     sourceLang: sourceLang.value.trim() || "auto",
     activeProviderId: settings.activeProviderId,
     chunkSize: Number(chunkSize.value),

@@ -416,9 +416,11 @@ function createCustomProviderId(kind: string): string {
 async function save(showSavedStatus = true): Promise<void> {
   try {
     settings = readSettingsFromForm();
-    // Ask while the click is fresh: the active service, every enabled LLM endpoint and the opted-in sites.
+    // Ask while the click is fresh: the active service, LLM endpoints the user filled in with a key,
+    // and the opted-in sites. Untouched default entries are never requested.
     const granted = await requestOrigins([...new Set([...requiredOrigins(settings), ...settings.providers
-      .filter(provider => provider.enabled !== false).flatMap(provider => providerOrigins(provider))])]);
+      .filter(provider => provider.enabled !== false && "apiKey" in provider && provider.apiKey.trim())
+      .flatMap(provider => providerOrigins(provider))])]);
     await persistSettings(false);
     render();
     if (showSavedStatus) setStatus(granted ? "已保存。" : "已保存，但未授予访问权限，相关服务暂时无法使用。");

@@ -38,6 +38,20 @@ describe("options provider model and test state", () => {
     document.documentElement.replaceChildren();
   });
 
+  it("asks for access only to the active service and keyed endpoints, never to untouched defaults", async () => {
+    stored.activeProviderId = "google-web-translate";
+    const request = vi.fn(async () => true);
+    const chromeStub = (globalThis as unknown as { chrome: Record<string, unknown> }).chrome;
+    chromeStub.permissions = { contains: async () => false, request };
+    await mount();
+    query<HTMLButtonElement>("#save").click();
+    await vi.waitFor(() => expect(request).toHaveBeenCalled());
+    const origins = (request.mock.calls as unknown as Array<[{ origins: string[] }]>).flatMap(([details]) => details.origins);
+    expect(origins).toContain("https://translate.googleapis.com/*");
+    expect(origins.join()).not.toContain("anthropic");
+    expect(origins.join()).not.toContain("api.openai.com");
+  });
+
   async function mount(): Promise<void> {
     await import("../src/options/index");
     await vi.waitFor(() => expect(query<HTMLElement>("#providerForm").dataset.providerId).toBe(stored.activeProviderId));

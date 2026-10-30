@@ -17,6 +17,9 @@ All notable changes to this fork are documented here. The format follows [Keep a
 - Providers are limited to Google web translation, OpenAI-compatible, Anthropic-compatible and the local offline engine; the provider picker is a plain select.
 - Stored `deepseek` / `zhipu-glm` entries with an API key migrate to OpenAI-compatible; other removed providers are dropped.
 
+### Fixed
+- Saving settings no longer asks for access to untouched default LLM endpoints (e.g. `api.anthropic.com`); only the active service and endpoints with an API key are requested.
+
 ### Removed
 - Floating ball, its menu and the Debug panel (paragraph mode and the transient notice moved to their own modules).
 - Doubao, Microsoft, Tencent, Yandex, Volcengine, MyMemory, Microsoft/Google Cloud API modes, DeepSeek/Zhipu presets, HTTP-template provider, request templates, Ollama compatibility, provider usage statistics and brand icons.

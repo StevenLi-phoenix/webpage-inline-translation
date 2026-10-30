@@ -6,13 +6,11 @@ import { normalizeSettings } from "../src/shared/settings";
 
 describe("custom local shortcuts", () => {
   it("migrates old settings, retains cleared keys and keeps independent defaults", () => {
-    const settings = normalizeSettings({ localShortcuts: { "selection-submit": "", "floating-activate": "", "floating-menu": "" } });
+    const settings = normalizeSettings({ localShortcuts: { "selection-submit": "" } });
     expect(settings.localShortcuts?.["paragraph-click"]).toBe("Ctrl");
     expect(settings.shortcutEnabled?.["selection-submit"]).toBe(false);
-    expect(settings.shortcutEnabled?.["floating-controls"]).toBe(false);
     settings.localShortcuts!["paragraph-click"] = "Alt";
     expect(normalizeLocalShortcuts(undefined)).toEqual(DEFAULT_LOCAL_SHORTCUTS);
-    expect(normalizeSettings({ localShortcuts: { "floating-activate": "" } }).shortcutEnabled?.["floating-controls"]).toBe(true);
   });
   it("accepts local navigation keys and exact modifier chords without widening page shortcut syntax", () => {
     expect(canonicalLocalShortcut("Escape")).toBe("Escape");

@@ -2,7 +2,7 @@ import { getSettings, saveSettings } from "../shared/settings";
 import type { RuntimeRequest, RuntimeResponse } from "../shared/types";
 import { createProvider } from "./providers";
 import { loadImageData, translateImageWithSettings } from "./image-translation";
-import { clearTranslationCache, getTranslationDebugSnapshot, translateWithSettings } from "./translation";
+import { clearTranslationCache, translateWithSettings } from "./translation";
 import { requestOcr } from "./ocr";
 import { installedRevision } from "../ocr/model-store";
 import { initImageContextMenu } from "./image-context-menu";
@@ -143,9 +143,6 @@ async function handleMessage(request: RuntimeRequest, sender: chrome.runtime.Mes
     }
     case "TRANSLATE_IMAGE":
       return translateImageWithSettings(await getSettings(), request);
-    case "GET_TRANSLATION_DEBUG":
-      return { ...getTranslationDebugSnapshot(),
-        ...(sender.tab?.id !== undefined ? { frames: await frameSessions.diagnostics(sender.tab.id) } : {}) };
     case "CLEAR_CACHE":
       return clearTranslationCache();
     case "TEST_PROVIDER": {
@@ -170,9 +167,6 @@ async function handleMessage(request: RuntimeRequest, sender: chrome.runtime.Mes
     case "TRANSLATE_CONTEXT_IMAGE":
     case "CLEAR_TRANSLATION":
     case "GET_TRANSLATION_STATE":
-    case "GET_FLOATING_BALL":
-    case "SET_FLOATING_BALL":
-    case "OPEN_TRANSLATION_DEBUG":
       throw new Error(`${request.type} must be sent to the active tab.`);
     default:
       return assertNever(request);

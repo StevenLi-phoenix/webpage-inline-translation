@@ -1,15 +1,12 @@
 export const LOCAL_BINDINGS = [
   { name: "paragraph-click", label: "段落点击", toggle: "paragraph-click" },
   { name: "selection-submit", label: "提交划词原文", toggle: "selection-submit" },
-  { name: "dismiss-overlays", label: "关闭卡片 / 收起菜单", toggle: "dismiss-overlays" },
-  { name: "floating-activate", label: "悬浮球翻译", toggle: "floating-controls" },
-  { name: "floating-menu", label: "进入悬浮菜单", toggle: "floating-controls" }
+  { name: "dismiss-overlays", label: "关闭卡片", toggle: "dismiss-overlays" }
 ] as const;
 export type LocalBinding = typeof LOCAL_BINDINGS[number]["name"];
 export type LocalShortcutSettings = Record<LocalBinding, string>;
 export const DEFAULT_LOCAL_SHORTCUTS: LocalShortcutSettings = {
-  "paragraph-click": "Ctrl", "selection-submit": "Primary+Enter", "dismiss-overlays": "Escape",
-  "floating-activate": "Enter|Space", "floating-menu": "ArrowDown"
+  "paragraph-click": "Ctrl", "selection-submit": "Primary+Enter", "dismiss-overlays": "Escape"
 };
 const MODIFIERS = ["Ctrl", "Alt", "Shift", "Meta", "Primary"];
 const KEYS = /^(?:[A-Z0-9]|F(?:[1-9]|1[0-2])|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown|Enter|Space|Escape)$/;

@@ -39,7 +39,7 @@ afterEach(() => {
 
 describe("live image translation settings", () => {
   it("applies an unrelated storage update while the initial settings read is pending", async () => {
-    update(settings, { ...settings, floatingBallEnabled: !settings.floatingBallEnabled });
+    update(settings, { ...settings, cacheEnabled: !settings.cacheEnabled });
     expect(host()?.shadowRoot?.querySelectorAll("button")).toHaveLength(1);
     finishRead(settings);
     await Promise.resolve();
@@ -72,7 +72,7 @@ describe("live image translation settings", () => {
     finishRead(settings);
     await vi.waitFor(() => expect(host()).not.toBeNull());
     const initial = host();
-    update(settings, { ...settings, floatingBallEnabled: false });
+    update(settings, { ...settings });
     expect(host()).toBe(initial);
     update(settings, { ...settings, targetLang: "ja" });
     expect(host()).not.toBe(initial);

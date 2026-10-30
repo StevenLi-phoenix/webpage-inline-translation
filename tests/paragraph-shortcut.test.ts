@@ -9,8 +9,8 @@ import { hasTranslationsIn } from "../src/content/dom";
 vi.mock("../src/content/runtime", () => ({ sendRuntimeRequest: vi.fn() }));
 
 beforeEach(() => {
-  document.body.innerHTML = '<main><p id="first" tabindex="0">Read this <a href="#"><span>complete paragraph</span></a> before continuing.</p><p id="second">Read this other paragraph too.</p><p id="third">Leave this paragraph alone.</p></main><p id="editable" contenteditable="true">Private draft text.</p><div id="wupage-floating-menu"><p>Extension controls.</p></div>';
-  const settings = { ...structuredClone(DEFAULT_SETTINGS), floatingBallEnabled: false, contextMenuTranslationEnabled: false,
+  document.body.innerHTML = '<main><p id="first" tabindex="0">Read this <a href="#"><span>complete paragraph</span></a> before continuing.</p><p id="second">Read this other paragraph too.</p><p id="third">Leave this paragraph alone.</p></main><p id="editable" contenteditable="true">Private draft text.</p><div id="wupage-image-tools"><p>Extension controls.</p></div>';
+  const settings = { ...structuredClone(DEFAULT_SETTINGS), contextMenuTranslationEnabled: false,
     selectionTranslation: { enabled: false, provider: "bing", style: "underline" } };
   vi.mocked(sendRuntimeRequest).mockImplementation(async request => {
     if (request.type === "GET_SETTINGS") return settings;
@@ -83,7 +83,7 @@ describe("paragraph translation shortcut", () => {
     expect(requests()).toHaveLength(1);
   });
 
-  it.each(["#editable", "#wupage-floating-menu p"])("ignores private or extension-owned selections in %s", async selector => {
+  it.each(["#editable", "#wupage-image-tools p"])("ignores private or extension-owned selections in %s", async selector => {
     const range = document.createRange(); range.selectNodeContents(document.querySelector(selector)!); select(range);
     await expect(translateShortcutParagraphs()).rejects.toThrow("正文段落");
     expect(sendRuntimeRequest).not.toHaveBeenCalled();

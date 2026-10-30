@@ -7,13 +7,11 @@ const { updateSettings, getPageState, hasTranslations } = vi.hoisted(() => ({
 vi.mock("../src/content/page-translation", () => ({
   hidePageTranslation: vi.fn(), startPageTranslation: vi.fn(), loadPageTranslationSettings: vi.fn(),
   updatePageTranslationSettings: updateSettings,
-  getPageTranslationState: getPageState
+  getPageTranslationState: getPageState, subscribePageTranslationState: vi.fn()
 }));
 vi.mock("../src/content/dom", () => ({ hasPageTranslations: hasTranslations }));
-vi.mock("../src/content/floating", () => ({
-  initFloatingBall: vi.fn(), getFloatingBallEnabled: vi.fn(), getParagraphMode: vi.fn(),
-  openDebugPanel: vi.fn(), setFloatingBallEnabled: vi.fn(), setParagraphMode: vi.fn(), refreshTranslationState: vi.fn()
-}));
+vi.mock("../src/content/paragraph-mode", () => ({ initParagraphMode: vi.fn(), getParagraphMode: vi.fn(), setParagraphMode: vi.fn() }));
+vi.mock("../src/content/page-context", () => ({ refreshTranslationState: vi.fn() }));
 vi.mock("../src/content/image-translation", () => ({ initImageTranslation: vi.fn(), translateContextImage: vi.fn() }));
 vi.mock("../src/content/styles", () => ({ injectContentStyles: vi.fn() }));
 vi.mock("../src/shared/appearance-runtime", () => ({ setupAppearance: vi.fn(() => ({ update: vi.fn() })) }));
@@ -38,7 +36,7 @@ describe("saved page settings updates", () => {
     listener({ [SETTINGS_KEY]: { oldValue: DEFAULT_SETTINGS, newValue: settings } }, "local");
     expect(updateSettings).toHaveBeenLastCalledWith(settings);
     listener({ [SETTINGS_KEY]: { newValue: settings } }, "sync");
-    listener({ "wupage.floating.position": { newValue: { left: 100, top: 100 } } }, "local");
+    listener({ "wupage.other": { newValue: { left: 100, top: 100 } } }, "local");
     listener({ [SETTINGS_KEY]: { newValue: undefined } }, "local");
     expect(updateSettings).toHaveBeenCalledTimes(4);
     expect(sendMessage).not.toHaveBeenCalled();

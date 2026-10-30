@@ -9,7 +9,7 @@ import { formatLocalShortcut, matchesLocalShortcut, normalizeLocalShortcuts } fr
 import { uiIconMarkup } from "../shared/ui-icons";
 
 const HOST_ID = "wupage-selection-tools";
-const EXCLUDED = "input,textarea,select,button,[contenteditable]:not([contenteditable='false']),[role='textbox'],#wupage-selection-tools,#wupage-floating-hitbox,#wupage-floating-menu,#wupage-debug-panel,#wupage-image-tools";
+const EXCLUDED = "input,textarea,select,button,[contenteditable]:not([contenteditable='false']),[role='textbox'],#wupage-selection-tools,#wupage-image-tools";
 
 export class SelectionTranslationController {
   private settings: SelectionTranslationSettings;

@@ -39,37 +39,35 @@ describe("appearance editor", () => {
     query<HTMLButtonElement>("#appearanceMenuTab").click();
     expect(query<HTMLElement>("#appearanceMenuPanel").hidden).toBe(false);
     query<HTMLButtonElement>('#popupMenuPreview [data-popup-menu-item="videoTranslation"]').click();
-    query<HTMLButtonElement>('#popupMenuPreview [data-popup-menu-item="floatingBall"]').dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", altKey: true, bubbles: true, cancelable: true }));
+    query<HTMLButtonElement>('#popupMenuPreview [data-popup-menu-item="contextMenuTranslation"]').dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", altKey: true, bubbles: true, cancelable: true }));
     expect(query('#popupMenuPreview [data-popup-menu-item="videoTranslation"]').hasAttribute("data-popup-menu-hidden")).toBe(true);
     const features = query('#popupMenuPreview [data-popup-menu-grid]');
-    expect((features.firstElementChild as HTMLElement).dataset.popupMenuItem).toBe("floatingBall");
+    expect((features.firstElementChild as HTMLElement).dataset.popupMenuItem).toBe("contextMenuTranslation");
     expect(query<HTMLButtonElement>('[data-menu-add="videoTranslation"]').hidden).toBe(false);
-    query<HTMLButtonElement>('#popupMenuPreview [data-popup-menu-item="debug"]').click();
-    query<HTMLButtonElement>('[data-menu-add="debug"]').click();
-    expect(query<HTMLButtonElement>('[data-menu-add="debug"]').hidden).toBe(true);
-    expect([...features.querySelectorAll<HTMLElement>("[data-popup-menu-item]")].filter(node => !node.hasAttribute("data-popup-menu-hidden")).at(-1)?.dataset.popupMenuItem).toBe("debug");
+    query<HTMLButtonElement>('#popupMenuPreview [data-popup-menu-item="clearCache"]').click();
+    query<HTMLButtonElement>('[data-menu-add="clearCache"]').click();
+    expect(query<HTMLButtonElement>('[data-menu-add="clearCache"]').hidden).toBe(true);
+    expect([...features.querySelectorAll<HTMLElement>("[data-popup-menu-item]")].filter(node => !node.hasAttribute("data-popup-menu-hidden")).at(-1)?.dataset.popupMenuItem).toBe("clearCache");
     query<HTMLButtonElement>("#save").click();
     await vi.waitFor(() => expect(stored.appearance?.popupMenu.hidden).toContain("videoTranslation"));
-    expect(stored.appearance!.popupMenu.order.indexOf("floatingBall")).toBeLessThan(stored.appearance!.popupMenu.order.indexOf("contextMenuTranslation"));
-    expect(stored.floatingBallEnabled).toBe(true);
+    expect(stored.contextMenuTranslationEnabled).toBe(false);
     expect(stored.videoTranslation).toBeUndefined();
   });
 
   it("resets only the menu draft and supports keyboard navigation between appearance tabs", async () => {
-    stored.appearance = { ...structuredClone(DEFAULT_APPEARANCE), lightSchemeId: "paper", floatingOpacity: 61 };
+    stored.appearance = { ...structuredClone(DEFAULT_APPEARANCE), lightSchemeId: "paper" };
     await mount();
     const colors = query<HTMLButtonElement>("#appearanceColorsTab"); colors.focus();
     colors.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
     expect(document.activeElement).toBe(query("#appearanceMenuTab"));
     expect(query<HTMLElement>("#appearanceMenuPanel").hidden).toBe(false);
-    query<HTMLButtonElement>('#popupMenuPreview [data-popup-menu-item="debug"]').click();
+    query<HTMLButtonElement>('#popupMenuPreview [data-popup-menu-item="clearCache"]').click();
     query<HTMLButtonElement>("#resetPopupMenu").click();
-    expect(query<HTMLButtonElement>('[data-menu-add="debug"]').hidden).toBe(true);
+    expect(query<HTMLButtonElement>('[data-menu-add="clearCache"]').hidden).toBe(true);
     query<HTMLButtonElement>("#save").click();
     await vi.waitFor(() => expect(query("#status").textContent).toBe("已保存。"));
     expect(stored.appearance?.popupMenu.hidden).toEqual([]);
     expect(stored.appearance?.lightSchemeId).toBe("paper");
-    expect(stored.appearance?.floatingOpacity).toBe(61);
   });
 
   it("copies, previews and saves a custom palette together with drafts in other categories", async () => {
@@ -140,13 +138,11 @@ describe("appearance editor", () => {
   it("saves independent component colors and previews both webpage backgrounds", async () => {
     await mount();
     query<HTMLButtonElement>("#duplicateScheme").click();
-    const updates = { "floating-background": "#b83468", "floating-foreground": "#ffffff", "floating-hover": "#91274e",
-      "translation-light": "#aa3344", "translation-dark": "#f3c97a", "selection-background": "#fffaf0", "image-button-background": "#202c2e" };
+    const updates = { "translation-light": "#aa3344", "translation-dark": "#f3c97a", "selection-background": "#fffaf0", "image-button-background": "#202c2e" };
     for (const [key, value] of Object.entries(updates)) {
       const field = query<HTMLInputElement>(`[data-color-hex='${key}']`);
       field.value = value; field.dispatchEvent(new Event("input"));
     }
-    expect(query<HTMLElement>("#appearancePreview").style.getPropertyValue("--wp-floating-background")).toBe("#b83468");
     expect(query<HTMLElement>(".appearance-preview-translation-light").style.color).toBe("rgb(170, 51, 68)");
     expect(query<HTMLElement>(".appearance-preview-translation-dark").style.color).toBe("rgb(243, 201, 122)");
     expect(query<HTMLInputElement>("[data-color-hex='accent']").value).toBe("#116466");
@@ -154,48 +150,6 @@ describe("appearance editor", () => {
     await vi.waitFor(() => expect(stored.appearance?.customSchemes[0].colors).toMatchObject(updates));
   });
 
-  it("links the opacity slider and numeric field, retains the draft and saves without copying a palette", async () => {
-    await mount();
-    const range = query<HTMLInputElement>("#floatingOpacityRange");
-    const number = query<HTMLInputElement>("#floatingOpacityNumber");
-    expect(range.disabled).toBe(false); expect(range.value).toBe("100");
-    range.value = "35"; range.dispatchEvent(new Event("input"));
-    expect(number.value).toBe("35");
-    expect(document.documentElement.style.getPropertyValue("--wp-floating-opacity")).toBe("0.35");
-    number.value = "0"; number.dispatchEvent(new Event("input"));
-    expect(range.value).toBe("0");
-    number.value = "62"; number.dispatchEvent(new Event("input"));
-    expect(range.value).toBe("62");
-    expect(sendMessage.mock.calls.some(([request]) => request.type === "SAVE_SETTINGS")).toBe(false);
-    query<HTMLButtonElement>("[data-appearance-tone='dark']").click();
-    expect(query<HTMLInputElement>("#floatingOpacityNumber").value).toBe("62");
-    query<HTMLAnchorElement>("a[aria-controls='generalSettings']").click();
-    query<HTMLAnchorElement>("a[aria-controls='appearanceSettings']").click();
-    expect(query<HTMLInputElement>("#floatingOpacityRange").value).toBe("62");
-    query<HTMLButtonElement>("#save").click();
-    await vi.waitFor(() => expect(stored.appearance?.floatingOpacity).toBe(62));
-    expect(stored.appearance?.customSchemes).toEqual([]);
-    query<HTMLButtonElement>("#restore").click();
-    await vi.waitFor(() => {
-      expect(stored.appearance?.floatingOpacity).toBe(100);
-      expect(query<HTMLInputElement>("#floatingOpacityNumber").value).toBe("100");
-    });
-  });
-
-  it("reveals an invalid opacity percentage when saving from another category and allows correction", async () => {
-    await mount();
-    const number = query<HTMLInputElement>("#floatingOpacityNumber");
-    number.value = "101"; number.dispatchEvent(new Event("input"));
-    query<HTMLAnchorElement>("a[aria-controls='generalSettings']").click();
-    query<HTMLButtonElement>("#save").click();
-    await vi.waitFor(() => expect(query("#status").textContent).toContain("整数透明度"));
-    expect(query<HTMLElement>("#appearanceSettings").hidden).toBe(false);
-    expect(document.activeElement).toBe(number);
-    expect(sendMessage.mock.calls.some(([request]) => request.type === "SAVE_SETTINGS")).toBe(false);
-    number.value = "45"; number.dispatchEvent(new Event("input"));
-    query<HTMLButtonElement>("#save").click();
-    await vi.waitFor(() => expect(stored.appearance?.floatingOpacity).toBe(45));
-  });
 });
 
 function query<T extends HTMLElement = HTMLElement>(selector: string): T {

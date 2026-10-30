@@ -26,7 +26,7 @@ const altShift = { altKey: true, shiftKey: true };
 
 describe("in-page shortcut editor", () => {
   it("switches every action independently, preserves bindings and restores defaults", () => {
-    mount(); expect(root.querySelectorAll("[role='switch']")).toHaveLength(8);
+    mount(); expect(root.querySelectorAll("[role='switch']")).toHaveLength(7);
     const toggle = root.querySelector<HTMLButtonElement>("[data-shortcut-toggle='toggle-page-translation']")!;
     toggle.click();
     expect(toggle.getAttribute("aria-checked")).toBe("false");

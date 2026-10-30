@@ -45,7 +45,6 @@ describe("popup translation interactions", () => {
           if (request.type === "GET_PARAGRAPH_MODE") return { ok: true, data: { enabled: false } };
           if (request.type === "GET_TRANSLATION_STATE") return { ok: true, data: { translated: false } };
           if (request.type === "SET_PARAGRAPH_MODE") return { ok: true, data: await paragraph(request.enabled) };
-          if (request.type === "SET_FLOATING_BALL") return { ok: true, data: { enabled: request.enabled } };
           if (request.type === "TRANSLATE_PAGE") return { ok: true, data: await translate() };
           return { ok: true, data: { cleared: true } };
         })
@@ -264,28 +263,6 @@ describe("popup translation interactions", () => {
     await vi.waitFor(() => expect(toggle.getAttribute("aria-pressed")).toBe("false"));
   });
 
-  it("keeps other controls stable when repeatedly toggling the floating ball", async () => {
-    const toggle = document.querySelector<HTMLButtonElement>("#floatingBall")!;
-    const changes = observeOtherControls(toggle);
-    try {
-      for (const enabled of [false, true, false, true]) {
-        const pending = deferred();
-        save.mockImplementationOnce(() => pending.promise);
-        const calls = save.mock.calls.length;
-        toggle.click();
-        await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(calls + 1));
-        toggle.click();
-        expect(save).toHaveBeenCalledTimes(calls + 1);
-        pending.resolve(undefined);
-        await vi.waitFor(() => expect(toggle.disabled).toBe(false));
-        expect(toggle.getAttribute("aria-pressed")).toBe(String(enabled));
-      }
-      expect(changes.records).toEqual([]);
-    } finally {
-      changes.disconnect();
-    }
-  });
-
   it("reports a failed paragraph change and allows a silent retry", async () => {
     paragraph.mockRejectedValueOnce(new Error("切换失败"));
     const toggle = document.querySelector<HTMLButtonElement>("#paragraphMode")!;
@@ -349,17 +326,6 @@ describe("popup translation interactions", () => {
     await vi.waitFor(() => expect(toggle.getAttribute("aria-pressed")).toBe("false"));
     expect(mode.value).toBe("replace");
     expect(stored.translationDisplayMode).toBe("replace");
-  });
-
-  it("restores the floating ball value when saving fails", async () => {
-    save.mockRejectedValueOnce(new Error("设置保存失败"));
-    const toggle = document.querySelector<HTMLButtonElement>("#floatingBall")!;
-    toggle.click();
-    await vi.waitFor(() => expect(toggle.disabled).toBe(false));
-    expect(toggle.getAttribute("aria-pressed")).toBe("true");
-    expect(document.querySelector("#status")?.textContent).toBe("设置保存失败");
-    toggle.click();
-    await vi.waitFor(() => expect(toggle.getAttribute("aria-pressed")).toBe("false"));
   });
 
   it("enables automatic translation directly and preserves its default language rule when disabled", async () => {
@@ -427,16 +393,6 @@ describe("popup translation interactions", () => {
     await vi.waitFor(() => expect(document.querySelector<HTMLButtonElement>("#autoTranslation")!.disabled).toBe(false));
   });
 
-  it("follows image translation and floating-ball switches changed from the reading menu", () => {
-    const incoming = { ...stored, imageTranslationEnabled: true, floatingBallEnabled: false };
-    settingsChanged({ [SETTINGS_KEY]: { newValue: incoming } }, "local");
-    expect(document.querySelector("#imageTranslation")?.getAttribute("aria-pressed")).toBe("true");
-    expect(document.querySelector("#floatingBall")?.getAttribute("aria-pressed")).toBe("false");
-    settingsChanged({ [SETTINGS_KEY]: { newValue: stored } }, "local");
-    expect(document.querySelector("#imageTranslation")?.getAttribute("aria-pressed")).toBe("false");
-    expect(document.querySelector("#floatingBall")?.getAttribute("aria-pressed")).toBe("true");
-  });
-
   it("synchronizes languages, providers, display mode and automatic rules before saving another field", async () => {
     stored = { ...stored, sourceLang: "ja", targetLang: "en", activeProviderId: "deepseek", translationDisplayMode: "bilingual-accent",
       cacheEnabled: false, autoTranslation: { enabled: true, nonTargetLanguage: true, presetSites: [], customSites: [] },
@@ -490,7 +446,6 @@ describe("popup translation interactions", () => {
   });
 
   it.each([
-    ["floatingBall", "floatingBallEnabled"],
     ["imageTranslation", "imageTranslationEnabled"]
   ] as const)("queues a %s change while automatic translation reads settings", async (id, field) => {
     const latest = structuredClone(stored);

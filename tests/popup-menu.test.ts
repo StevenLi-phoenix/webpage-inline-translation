@@ -11,16 +11,16 @@ describe("popup menu preferences", () => {
   it("keeps all entries for older settings and returns independent arrays", () => {
     const layout = normalizeAppearance(undefined).popupMenu;
     expect(layout).toEqual(DEFAULT_POPUP_MENU);
-    layout.hidden.push("debug"); layout.order.reverse();
+    layout.hidden.push("clearCache"); layout.order.reverse();
     layout.rows[0].reverse();
     expect(normalizePopupMenu(undefined)).toEqual(DEFAULT_POPUP_MENU);
   });
 
   it("drops unknown and duplicate IDs, retains explicit hiding and appends missing entries", () => {
-    const result = normalizePopupMenu({ order: ["videoTranslation", "videoTranslation", "unknown", null], hidden: ["debug", "debug", "bad"] });
+    const result = normalizePopupMenu({ order: ["videoTranslation", "videoTranslation", "unknown", null], hidden: ["clearCache", "clearCache", "bad"] });
     expect(result.order[0]).toBe("videoTranslation");
     expect(new Set(result.order).size).toBe(POPUP_MENU_ITEMS.length);
-    expect(result.hidden).toEqual(["debug"]);
+    expect(result.hidden).toEqual(["clearCache"]);
     expect(normalizePopupMenu({ order: "invalid", hidden: false })).toEqual(DEFAULT_POPUP_MENU);
   });
 
@@ -88,10 +88,10 @@ describe("popup menu preferences", () => {
 
   it("keeps explicit pairs, cleans malformed rows and excludes hidden entries from geometry", () => {
     const layout = normalizePopupMenu({ rows: [["openPdfWorkspace", "clearCache", "clearCache", "openWebsite"], null,
-      ["pageToggle", "floatingBall", "selectionTranslation"]], hidden: ["selectionTranslation"] });
-    expect(layout.rows.slice(0, 2)).toEqual([["openPdfWorkspace", "clearCache"], ["pageToggle", "floatingBall"]]);
+      ["pageToggle", "paragraphMode", "selectionTranslation"]], hidden: ["selectionTranslation"] });
+    expect(layout.rows.slice(0, 2)).toEqual([["openPdfWorkspace", "clearCache"], ["pageToggle", "paragraphMode"]]);
     expect(layout.rows.every(row => row.length > 0 && row.length <= 2)).toBe(true);
-    expect(new Set(layout.order).size).toBe(12);
+    expect(new Set(layout.order).size).toBe(10);
     expect(layout.rows.flat()).not.toContain("selectionTranslation");
   });
 

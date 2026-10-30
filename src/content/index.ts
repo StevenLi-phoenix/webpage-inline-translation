@@ -1,18 +1,14 @@
 import type { ExtensionSettings, RuntimeRequest, RuntimeResponse } from "../shared/types";
 import { hasPageTranslations, refreshTranslationColors } from "./dom";
-import {
-  getFloatingBallEnabled,
-  initFloatingBall,
-  openDebugPanel,
-  setFloatingBallEnabled,
-  setParagraphMode
-} from "./floating";
+import { initParagraphMode, setParagraphMode } from "./paragraph-mode";
+import { refreshTranslationState } from "./page-context";
 import { addRuntimeMessageListener, sendRuntimeRequest } from "./runtime";
 import {
   getPageTranslationState,
   hidePageTranslation,
   loadPageTranslationSettings,
   startPageTranslation,
+  subscribePageTranslationState,
   updatePageTranslationSettings
 } from "./page-translation";
 import { injectContentStyles } from "./styles";
@@ -58,7 +54,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
 void sendRuntimeRequest<ExtensionSettings>({ type: "GET_SETTINGS" }).then(settings => {
   if (!appearanceRevision) appearance.update(settings.appearance);
 }).catch(() => undefined);
-initFloatingBall();
+initParagraphMode();
+subscribePageTranslationState(refreshTranslationState);
 initImageTranslation();
 initAutoTranslation();
 initSelectionTranslation();
@@ -100,20 +97,6 @@ async function handleMessage(request: RuntimeRequest): Promise<unknown> {
   if (request.type === "SET_PARAGRAPH_MODE") {
     await setParagraphMode(request.enabled);
     return { enabled: await readParagraphMode() };
-  }
-
-  if (request.type === "GET_FLOATING_BALL") {
-    return { enabled: getFloatingBallEnabled() };
-  }
-
-  if (request.type === "SET_FLOATING_BALL") {
-    await setFloatingBallEnabled(request.enabled);
-    return { enabled: getFloatingBallEnabled() };
-  }
-
-  if (request.type === "OPEN_TRANSLATION_DEBUG") {
-    await openDebugPanel();
-    return { opened: true };
   }
 
   if (request.type !== "TRANSLATE_PAGE") {

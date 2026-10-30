@@ -36,7 +36,6 @@ const pdfTranslationScope = query<HTMLSelectElement>("#pdfTranslationScope");
 const pdfTranslationPageRadius = query<HTMLInputElement>("#pdfTranslationPageRadius");
 const pdfTranslationPageRadiusField = query<HTMLElement>("#pdfTranslationPageRadiusField");
 const cacheEnabled = query<HTMLInputElement>("#cacheEnabled");
-const floatingBallEnabled = query<HTMLInputElement>("#floatingBallEnabled");
 const selectionTranslationEnabled = query<HTMLInputElement>("#selectionTranslationEnabled");
 const selectionTranslationFields = query<HTMLFieldSetElement>("#selectionTranslationFields");
 const selectionDictionary = query<HTMLSelectElement>("#selectionDictionary");
@@ -197,7 +196,6 @@ function render(): void {
   pdfTranslationPageRadius.value = String(settings.pdfTranslationPageRadius ?? DEFAULT_SETTINGS.pdfTranslationPageRadius);
   updatePdfTranslationScope();
   cacheEnabled.checked = settings.cacheEnabled;
-  floatingBallEnabled.checked = settings.floatingBallEnabled;
   const selection = normalizeSelectionTranslation(settings.selectionTranslation);
   selectionTranslationEnabled.checked = selection.enabled;
   selectionTranslationFields.disabled = !selection.enabled;
@@ -929,7 +927,6 @@ function readSettingsFromForm(): ExtensionSettings {
     pdfTranslationPageRadius: pdfTranslationScope.value === "unlimited" ? null
       : pdfTranslationPageRadius.value === "" ? DEFAULT_SETTINGS.pdfTranslationPageRadius : Number(pdfTranslationPageRadius.value),
     cacheEnabled: cacheEnabled.checked,
-    floatingBallEnabled: floatingBallEnabled.checked,
     selectionTranslation: {
       enabled: selectionTranslationEnabled.checked,
       provider: selectionDictionary.value as DictionaryProvider,

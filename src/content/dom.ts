@@ -106,9 +106,6 @@ const SKIP_SELECTORS = [
   "#wupage-video-panel",
   "#wupage-video-overlay",
   "#wupage-selection-tools",
-  "#wupage-floating-hitbox",
-  "#wupage-floating-menu",
-  "#wupage-debug-panel",
   "#wupage-paragraph-highlight",
   "header",
   "nav",
@@ -1024,7 +1021,7 @@ function collectAttributeSegments(
 
   for (const candidate of candidates) {
     if (!(candidate instanceof HTMLElement) || trackedElements.has(candidate)) continue;
-    if (candidate.closest(`.${TRANSLATION_CLASS}, #wupage-floating-menu, #wupage-debug-panel`)) continue;
+    if (candidate.closest(`.${TRANSLATION_CLASS}`)) continue;
     if (!visibility.isElementVisuallyRendered(candidate)) continue;
     const sourceValue = candidate.getAttribute("placeholder") ?? "";
     const sourceText = normalizeText(sourceValue);

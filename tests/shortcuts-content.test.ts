@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../src/content/page-translation", () => ({ getPageTranslationState: mocks.getState,
   hidePageTranslation: mocks.hide, startPageTranslation: mocks.start, setPageTranslationDisplayMode: mocks.setMode }));
 vi.mock("../src/content/dom", () => ({ hasPageTranslations: mocks.hasTranslations }));
-vi.mock("../src/content/floating", () => ({ getParagraphMode: mocks.paragraph, setParagraphMode: mocks.setParagraph, refreshTranslationState: mocks.refresh }));
+vi.mock("../src/content/paragraph-mode", () => ({ getParagraphMode: mocks.paragraph, setParagraphMode: mocks.setParagraph }));
+vi.mock("../src/content/page-context", () => ({ refreshTranslationState: mocks.refresh }));
 vi.mock("../src/content/runtime", () => ({ sendRuntimeRequest: mocks.send }));
 vi.mock("../src/content/paragraph-shortcut", () => ({ translateShortcutParagraphs: mocks.selection }));
 

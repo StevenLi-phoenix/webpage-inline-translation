@@ -14,9 +14,6 @@ const CONTEXT_BLOCK_SELECTOR = [
 ].join(",");
 const EXTENSION_OWNED_SELECTOR = [
   ".wupage-translation",
-  "#wupage-floating-hitbox",
-  "#wupage-floating-menu",
-  "#wupage-debug-panel",
   "#wupage-paragraph-highlight"
 ].join(",");
 const MAX_CONTEXT_CHARS = 2400;

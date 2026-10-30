@@ -12,8 +12,7 @@ export type TranslationShortcut = typeof TRANSLATION_SHORTCUTS[number]["name"];
 export const LOCAL_SHORTCUTS = [
   { name: "paragraph-click", label: "段落模式中翻译 / 恢复当前段落", keys: ["Ctrl", "点击段落"] },
   { name: "selection-submit", label: "提交划词卡片中编辑的原文", keys: ["Ctrl", "Enter"] },
-  { name: "dismiss-overlays", label: "关闭划词卡片 / 收起悬浮菜单", keys: ["Esc"] },
-  { name: "floating-controls", label: "悬浮球翻译 / 进入菜单", keys: ["Enter / 空格", "↓"] }
+  { name: "dismiss-overlays", label: "关闭划词卡片", keys: ["Esc"] }
 ] as const;
 export type LocalShortcut = typeof LOCAL_SHORTCUTS[number]["name"];
 export type ShortcutEnabledSettings = Record<TranslationShortcut | LocalShortcut, boolean>;
@@ -96,7 +95,6 @@ export function normalizeShortcutEnabled(value: unknown, bindings?: unknown, loc
   const shortcuts = normalizeShortcuts(bindings);
   const local = normalizeLocalShortcuts(localBindings);
   return Object.fromEntries([...TRANSLATION_SHORTCUTS, ...LOCAL_SHORTCUTS].map(({ name }) => [
-    name, input[name] !== false && (name in shortcuts ? Boolean(shortcuts[name as TranslationShortcut])
-      : name === "floating-controls" ? Boolean(local["floating-activate"] || local["floating-menu"]) : Boolean(local[name as Exclude<LocalShortcut, "floating-controls">]))
+    name, input[name] !== false && (name in shortcuts ? Boolean(shortcuts[name as TranslationShortcut]) : Boolean(local[name as LocalShortcut]))
   ])) as ShortcutEnabledSettings;
 }

@@ -21,7 +21,7 @@ const settings: ExtensionSettings = {
   concurrency: 8,
   pdfTranslationPageRadius: 5,
   cacheEnabled: true,
-  floatingBallEnabled: true,
+
   translateCodeComments: true,
   translationDisplayMode: "bilingual",
   providers: []

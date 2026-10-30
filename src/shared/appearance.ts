@@ -14,9 +14,6 @@ interface InterfaceColors {
   danger: string;
 }
 export interface AppearanceColors extends InterfaceColors {
-  "floating-background": string;
-  "floating-foreground": string;
-  "floating-hover": string;
   "translation-light": string;
   "translation-dark": string;
   "paragraph-highlight": string;
@@ -36,15 +33,13 @@ export interface ColorScheme {
 export interface AppearanceSettings {
   popupMenu: PopupMenuLayout;
   mode: AppearanceMode;
-  floatingOpacity: number;
   lightSchemeId: string;
   darkSchemeId: string;
   customSchemes: ColorScheme[];
 }
 
 export const COLOR_GROUPS = [
-  { id: "interface", label: "界面", description: "设置、弹窗、悬浮菜单与 Debug 面板。" },
-  { id: "floating", label: "悬浮球", description: "悬浮球的背景、文字和鼠标悬停颜色。" },
+  { id: "interface", label: "界面", description: "设置与弹窗。" },
   { id: "translation", label: "译文与段落", description: "双色译文按网页背景选色，并自动调整对比度；原色对照和译文替换沿用原文颜色。" },
   { id: "selection", label: "划词翻译", description: "划词入口和词典卡片。" },
   { id: "image", label: "图片翻译入口", description: "图片旁的翻译按钮；图片内译文按原图配色。" }
@@ -55,8 +50,6 @@ export const COLOR_FIELDS: ReadonlyArray<{ key: keyof AppearanceColors; label: s
   { key: "foreground", label: "主要文字", group: "interface" }, { key: "muted", label: "次要文字", group: "interface" },
   { key: "accent", label: "强调色", group: "interface" }, { key: "border", label: "边框", group: "interface" },
   { key: "success", label: "成功提示", group: "interface" }, { key: "danger", label: "错误提示", group: "interface" },
-  { key: "floating-background", label: "背景", group: "floating" }, { key: "floating-foreground", label: "文字", group: "floating" },
-  { key: "floating-hover", label: "悬停背景", group: "floating" },
   { key: "translation-light", label: "浅色网页译文", group: "translation" },
   { key: "translation-dark", label: "深色网页译文", group: "translation" },
   { key: "paragraph-highlight", label: "段落高亮", group: "translation" },
@@ -72,24 +65,24 @@ export const BUILT_IN_SCHEMES: readonly ColorScheme[] = [
   { id: "wupage-light", name: "雾青", tone: "light", colors: createColors({
     background: "#f7f8f5", surface: "#ffffff", foreground: "#172026", muted: "#647379",
     accent: "#116466", border: "#d7dedb", success: "#25734c", danger: "#b42318"
-  }, { "translation-light": "#0f766e", "translation-dark": "#5eead4", "floating-hover": "#0f5557" }) },
+  }, { "translation-light": "#0f766e", "translation-dark": "#5eead4" }) },
   { id: "paper", name: "暖纸", tone: "light", colors: createColors({
     background: "#f5f1e8", surface: "#fffdf7", foreground: "#332d25", muted: "#786c5b",
     accent: "#936235", border: "#ddd3c2", success: "#50733d", danger: "#b13f35"
-  }, { "translation-dark": "#edc69d", "floating-hover": "#79502a" }) },
+  }, { "translation-dark": "#edc69d" }) },
   { id: "wupage-dark", name: "夜青", tone: "dark", colors: createColors({
     background: "#151e20", surface: "#202c2e", foreground: "#e7efec", muted: "#a5b8b5",
     accent: "#83d2c5", border: "#3c5050", success: "#8ad4a4", danger: "#ffaaa2"
-  }, { "translation-light": "#0f766e", "translation-dark": "#5eead4", "floating-hover": "#a1e4d8" }) },
+  }, { "translation-light": "#0f766e", "translation-dark": "#5eead4" }) },
   { id: "midnight", name: "午夜蓝", tone: "dark", colors: createColors({
     background: "#151b2b", surface: "#202a40", foreground: "#e6ecfa", muted: "#a4b2d0",
     accent: "#9cbcff", border: "#394866", success: "#8bd5b0", danger: "#ffaaa9"
-  }, { "translation-light": "#2563eb", "translation-dark": "#9cbcff", "floating-hover": "#b7ceff" }) }
+  }, { "translation-light": "#2563eb", "translation-dark": "#9cbcff" }) }
 ];
 
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
   popupMenu: DEFAULT_POPUP_MENU,
-  mode: "system", floatingOpacity: 100, lightSchemeId: "wupage-light", darkSchemeId: "wupage-dark", customSchemes: []
+  mode: "system", lightSchemeId: "wupage-light", darkSchemeId: "wupage-dark", customSchemes: []
 };
 
 export function isHexColor(value: unknown): value is string {
@@ -122,8 +115,6 @@ export function normalizeAppearance(value: unknown): AppearanceSettings {
   return {
     popupMenu: normalizePopupMenu(input.popupMenu),
     mode: input.mode === "light" || input.mode === "dark" ? input.mode : "system",
-    floatingOpacity: typeof input.floatingOpacity === "number" && Number.isFinite(input.floatingOpacity)
-      ? Math.max(0, Math.min(100, Math.round(input.floatingOpacity))) : DEFAULT_APPEARANCE.floatingOpacity,
     lightSchemeId: all.find(entry => entry.id === input.lightSchemeId && entry.tone === "light")?.id ?? DEFAULT_APPEARANCE.lightSchemeId,
     darkSchemeId: all.find(entry => entry.id === input.darkSchemeId && entry.tone === "dark")?.id ?? DEFAULT_APPEARANCE.darkSchemeId,
     customSchemes
@@ -164,7 +155,6 @@ function record(value: unknown): Record<string, unknown> {
 
 function createColors(base: InterfaceColors, overrides: Partial<AppearanceColors> = {}): AppearanceColors {
   return { ...base,
-    "floating-background": base.accent, "floating-foreground": accentForeground(base.accent), "floating-hover": base.accent,
     "translation-light": base.accent, "translation-dark": base.accent, "paragraph-highlight": base.accent,
     "selection-trigger": base.accent, "selection-background": base.surface, "selection-foreground": base.foreground,
     "selection-accent": base.accent, "image-button-background": base.accent, "image-button-foreground": accentForeground(base.accent),

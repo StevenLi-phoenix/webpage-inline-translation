@@ -4,14 +4,12 @@ export const POPUP_MENU_GROUPS = [
 ] as const;
 export const POPUP_MENU_ITEMS = [
   { id: "contextMenuTranslation", label: "右键翻译", group: "features" },
-  { id: "floatingBall", label: "悬浮球", group: "features" },
   { id: "selectionTranslation", label: "划词翻译", group: "features" },
   { id: "imageTranslation", label: "图片翻译", group: "features" },
   { id: "videoTranslation", label: "视频字幕", group: "features" },
   { id: "pageToggle", label: "翻译全文", group: "translation" },
   { id: "paragraphMode", label: "段落翻译", group: "translation" },
   { id: "openPdfWorkspace", label: "打开 PDF", group: "tools" },
-  { id: "debug", label: "Debug", group: "tools" },
   { id: "clearCache", label: "清除缓存", group: "tools" },
   { id: "openGithub", label: "GitHub", group: "links" },
   { id: "openWebsite", label: "官网", group: "links" }
@@ -22,8 +20,8 @@ export const isPopupMenuLink = (id: PopupMenuItem): boolean => POPUP_MENU_LINKS.
 export interface PopupMenuLayout { order: PopupMenuItem[]; hidden: PopupMenuItem[]; rows: PopupMenuItem[][] }
 export const DEFAULT_POPUP_MENU: PopupMenuLayout = {
   order: POPUP_MENU_ITEMS.map(item => item.id), hidden: [],
-  rows: [["contextMenuTranslation", "floatingBall"], ["selectionTranslation", "imageTranslation"], ["videoTranslation"],
-    ["pageToggle", "paragraphMode"], ["openPdfWorkspace"], ["debug", "clearCache"]]
+  rows: [["contextMenuTranslation", "selectionTranslation"], ["imageTranslation"], ["videoTranslation"],
+    ["pageToggle", "paragraphMode"], ["openPdfWorkspace"], ["clearCache"]]
 };
 
 /** Recover the exact former layout when importing settings without explicit rows. */

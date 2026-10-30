@@ -197,7 +197,6 @@ export interface ExtensionSettings {
   /** Pages to translate on each side of the reading page; null means the whole PDF. */
   pdfTranslationPageRadius: number | null;
   cacheEnabled: boolean;
-  floatingBallEnabled: boolean;
   contextMenuTranslationEnabled?: boolean;
   imageTranslationEnabled?: boolean;
   translateCodeComments: boolean;
@@ -329,10 +328,6 @@ export type RuntimeRequest =
   | { type: "PAGE_TRANSLATION_STATE_CHANGED" }
   | { type: "GET_PARAGRAPH_MODE" }
   | { type: "SET_PARAGRAPH_MODE"; enabled: boolean }
-  | { type: "GET_FLOATING_BALL" }
-  | { type: "SET_FLOATING_BALL"; enabled: boolean }
-  | { type: "OPEN_TRANSLATION_DEBUG" }
-  | { type: "GET_TRANSLATION_DEBUG" }
   | { type: "CLEAR_CACHE" }
   | { type: "LOAD_IMAGE"; url: string }
   | { type: "TRANSLATE_CONTEXT_IMAGE"; srcUrl: string }

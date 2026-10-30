@@ -77,7 +77,7 @@ describe("popup language controls", () => {
     query<HTMLSelectElement>("#translationDisplayMode").value = "replace";
     target.value = "zh-CN";
     target.dispatchEvent(new Event("change", { bubbles: true }));
-    query<HTMLButtonElement>("#floatingBall").click();
+    query<HTMLButtonElement>("#contextMenuTranslation").click();
     query<HTMLButtonElement>("#autoTranslation").click();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(snapshots).toHaveLength(1);
@@ -85,10 +85,10 @@ describe("popup language controls", () => {
     await vi.waitFor(() => expect(completed).toHaveLength(4));
 
     expect(completed).toEqual(["ja", "zh-CN", "zh-CN", "zh-CN"]);
-    expect(stored).toMatchObject({ sourceLang: "en", targetLang: "zh-CN", translationDisplayMode: "replace", floatingBallEnabled: false });
+    expect(stored).toMatchObject({ sourceLang: "en", targetLang: "zh-CN", translationDisplayMode: "replace", contextMenuTranslationEnabled: true });
     expect(snapshots[0]).toMatchObject({ sourceLang: "auto", targetLang: "ja", translationDisplayMode: "bilingual" });
-    expect(snapshots[1]).toMatchObject({ sourceLang: "en", targetLang: "zh-CN", translationDisplayMode: "replace", floatingBallEnabled: true });
-    expect(snapshots[2]).toMatchObject({ sourceLang: "en", targetLang: "zh-CN", translationDisplayMode: "replace", floatingBallEnabled: false });
+    expect(snapshots[1]).toMatchObject({ sourceLang: "en", targetLang: "zh-CN", translationDisplayMode: "replace", contextMenuTranslationEnabled: false });
+    expect(snapshots[2]).toMatchObject({ sourceLang: "en", targetLang: "zh-CN", translationDisplayMode: "replace", contextMenuTranslationEnabled: true });
     expect(snapshots[3]).toMatchObject({ sourceLang: "en", targetLang: "zh-CN", autoTranslation: { enabled: true } });
     expect(stored.autoTranslation?.enabled).toBe(true);
     expect(target.value).toBe("zh-CN");
@@ -237,7 +237,6 @@ describe("popup language controls", () => {
 
     expect(query<HTMLButtonElement>("#pageToggle").disabled).toBe(true);
     expect(query<HTMLButtonElement>("#paragraphMode").disabled).toBe(true);
-    expect(query<HTMLButtonElement>("#debug").disabled).toBe(true);
     expect(sendTabMessage).not.toHaveBeenCalled();
 
     expect(chrome.tabs.create).not.toHaveBeenCalled();

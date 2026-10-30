@@ -27,8 +27,6 @@
     "test:spa": "node scripts/test-spa-translation.mjs",
     "test:spa:edge": "node scripts/test-spa-translation.mjs --edge",
     "test:spa:firefox": "node scripts/test-spa-translation.mjs --firefox",
-    "test:floating": "node scripts/test-floating-interactions.mjs",
-    "test:floating-responsive": "node scripts/test-floating-responsive.mjs",
     "test:selection": "node scripts/test-selection-translation.mjs",
     "test:video": "node scripts/test-video-subtitles.mjs",
     "test:video:edge": "node scripts/test-video-subtitles.mjs --edge",

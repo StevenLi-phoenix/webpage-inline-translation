@@ -1,7 +1,7 @@
 import { findTranslatableParagraph } from "./dom";
 import { translateParagraph } from "./paragraph-translation";
 
-const EXCLUDED = "input,textarea,select,button,[contenteditable]:not([contenteditable='false']),[role='textbox'],[role='combobox'],[role='button'],img,video,audio,canvas,svg,#wupage-selection-tools,#wupage-floating-hitbox,#wupage-floating-menu,#wupage-debug-panel,#wupage-image-tools,#wupage-shortcut-notice";
+const EXCLUDED = "input,textarea,select,button,[contenteditable]:not([contenteditable='false']),[role='textbox'],[role='combobox'],[role='button'],img,video,audio,canvas,svg,#wupage-selection-tools,#wupage-image-tools,#wupage-shortcut-notice";
 
 function resolveParagraph(element: Element | null): Element | null {
   if (!element || element === document.body || element === document.documentElement || element.closest(EXCLUDED)) return null;

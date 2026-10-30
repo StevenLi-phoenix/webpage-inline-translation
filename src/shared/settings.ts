@@ -62,10 +62,6 @@ export function normalizeSettings(value: unknown): ExtensionSettings {
       typeof input.cacheEnabled === "boolean"
         ? input.cacheEnabled
         : DEFAULT_SETTINGS.cacheEnabled,
-    floatingBallEnabled:
-      typeof input.floatingBallEnabled === "boolean"
-        ? input.floatingBallEnabled
-        : DEFAULT_SETTINGS.floatingBallEnabled,
     translateCodeComments:
       typeof input.translateCodeComments === "boolean"
         ? input.translateCodeComments

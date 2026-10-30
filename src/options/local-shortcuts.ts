@@ -20,7 +20,7 @@ export function setupLocalShortcutSettings(root: HTMLElement, callbacks: Callbac
     return LOCAL_BINDINGS.find(item => item.name !== "paragraph-click" && item.name !== exclude && overlap(values[item.name], value))?.label;
   }
   function empty(name: LocalShortcut): boolean {
-    return name === "floating-controls" ? !values["floating-activate"] && !values["floating-menu"] : !values[name];
+    return !values[name];
   }
   function refresh(enabled: boolean): void {
     ready = enabled;
@@ -61,10 +61,6 @@ export function setupLocalShortcutSettings(root: HTMLElement, callbacks: Callbac
     for (const binding of LOCAL_BINDINGS.filter(binding => binding.toggle === item.name)) {
       const group = document.createElement("div"); group.className = "shortcut-local-binding";
       const field = document.createElement("div"); field.className = "shortcut-field";
-      if (item.name === "floating-controls") {
-        const caption = document.createElement("label"); caption.htmlFor = `shortcut-local-${binding.name}`;
-        caption.textContent = binding.name === "floating-activate" ? "翻译" : "进入菜单"; field.append(caption);
-      }
       const input = document.createElement(binding.name === "paragraph-click" ? "select" : "input");
       input.id = `shortcut-local-${binding.name}`; input.dataset.localCommand = binding.name;
       input.setAttribute("aria-label", `${binding.label}快捷键`);

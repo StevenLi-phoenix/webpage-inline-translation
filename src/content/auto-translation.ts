@@ -14,7 +14,7 @@ interface AutoTranslationDependencies {
   detectLanguage?: (text: string) => Promise<{ languages: Array<{ language: string; percentage: number }> }>;
 }
 
-const OWNED = '.wupage-translation,.wupage-translation-pending,#wupage-floating-hitbox,#wupage-floating-menu,#wupage-debug-panel,#wupage-paragraph-highlight,[data-wupage-video],[data-wupage-video-style],[data-wupage-video-native]';
+const OWNED = '.wupage-translation,.wupage-translation-pending,#wupage-paragraph-highlight,[data-wupage-video],[data-wupage-video-style],[data-wupage-video-native]';
 const SKIP_TEXT = `${OWNED},script,style,noscript,pre,code,textarea,input,select,button,nav,header,footer,aside,[contenteditable="true"],[hidden],[aria-hidden="true"]`;
 
 export function initAutoTranslation(overrides: Partial<AutoTranslationDependencies> = {}): () => void {

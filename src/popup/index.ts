@@ -39,9 +39,7 @@ const contextMenuTranslationButton = query<HTMLButtonElement>("#contextMenuTrans
 const autoTranslationButton = query<HTMLButtonElement>("#autoTranslation");
 const addAutoTranslationSiteButton = query<HTMLButtonElement>("#addAutoTranslationSite");
 const selectionTranslationButton = query<HTMLButtonElement>("#selectionTranslation");
-const floatingBallButton = query<HTMLButtonElement>("#floatingBall");
 const imageTranslationButton = query<HTMLButtonElement>("#imageTranslation");
-const debugButton = query<HTMLButtonElement>("#debug");
 const clearCacheButton = query<HTMLButtonElement>("#clearCache");
 const optionsButton = query<HTMLButtonElement>("#openOptions");
 const githubButton = query<HTMLButtonElement>("#openGithub");
@@ -57,7 +55,6 @@ let paragraphModeError: string | undefined;
 let autoTranslationNotice: string | undefined;
 let pageTranslated = false;
 let pageActionVersion = 0;
-let floatingBallEnabled = true;
 let activeTabIsPdf = false;
 let activePageURL: string | undefined;
 let pageTranslationAvailable = true;
@@ -127,8 +124,6 @@ async function init(): Promise<void> {
   updateSelectionTranslationButton();
   selectionTranslationButton.addEventListener("click", toggleSelectionTranslation);
   selectionTranslationButton.disabled = false;
-  floatingBallEnabled = settings.floatingBallEnabled;
-  updateFloatingBallButton();
   setImageTranslationToggle(imageTranslationButton, settings.imageTranslationEnabled === true);
   setupOcrControl(imageTranslationButton, () => { settings.imageTranslationEnabled = false; setImageTranslationToggle(imageTranslationButton, false); });
   settingsReady = true;
@@ -146,7 +141,6 @@ async function init(): Promise<void> {
     paragraphModeAvailable = false;
     paragraphModeButton.title = "浏览器设置页和扩展内部页面不支持段落模式。";
     pageToggleButton.title = "请切换到普通网页后再翻译。";
-    debugButton.title = "请切换到普通网页后再打开 Debug。";
     setStatus(activeTab?.url
       ? "此页面不支持翻译，请切换到网页或 PDF。"
       : "无法读取当前页面地址。若为本地 PDF，请开启扩展的文件访问权限，或点击“打开 PDF”选择文件。");
@@ -171,8 +165,6 @@ async function init(): Promise<void> {
   updateContextMenuTranslationButton();
   translationDisplayMode.disabled = false;
   contextMenuTranslationButton.disabled = false;
-  floatingBallButton.addEventListener("click", toggleFloatingBall);
-  floatingBallButton.disabled = false;
   imageTranslationButton.addEventListener("click", async () => {
     setButtonBusy(imageTranslationButton, true);
     const previous = settings.imageTranslationEnabled === true;
@@ -185,7 +177,6 @@ async function init(): Promise<void> {
       setButtonBusy(imageTranslationButton, false);
     }
   });
-  debugButton.addEventListener("click", openDebugPanel);
   clearCacheButton.addEventListener("click", clearCache);
   optionsButton.addEventListener("click", () => chrome.runtime.openOptionsPage());
   githubButton.addEventListener("click", () => {
@@ -261,10 +252,6 @@ function applyPopupSettings(incoming: ExtensionSettings): void {
   if (contextMenuTranslationButton.getAttribute("aria-busy") !== "true") updateContextMenuTranslationButton();
   if (autoTranslationButton.getAttribute("aria-busy") !== "true") updateAutoTranslationButton();
   if (selectionTranslationButton.getAttribute("aria-busy") !== "true") updateSelectionTranslationButton();
-  if (floatingBallButton.getAttribute("aria-busy") !== "true") {
-    floatingBallEnabled = settings.floatingBallEnabled;
-    updateFloatingBallButton();
-  }
   if (imageTranslationButton.getAttribute("aria-busy") !== "true") setImageTranslationToggle(imageTranslationButton, settings.imageTranslationEnabled === true);
   syncDoubaoTargetControls(settings, targetLang);
   updateLocalNotice();
@@ -619,56 +606,6 @@ function updateContextMenuTranslationButton(): void {
   if (contextMenuTranslationButton.getAttribute("aria-pressed") !== value) contextMenuTranslationButton.setAttribute("aria-pressed", value);
 }
 
-async function toggleFloatingBall(): Promise<void> {
-  setButtonBusy(floatingBallButton, true);
-  setStatus("正在切换悬浮球...");
-  const previous = floatingBallEnabled;
-  let saved = false;
-  try {
-    floatingBallEnabled = !floatingBallEnabled;
-    await updatePopupSettings({ floatingBallEnabled });
-    saved = true;
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (pageTranslationAvailable && !activeTabIsPdf && tab.id) {
-      await sendTabMessage<{ enabled: boolean }>(tab.id, {
-        type: "SET_FLOATING_BALL",
-        enabled: floatingBallEnabled
-      }).catch(() => undefined);
-    }
-    updateFloatingBallButton();
-    setStatus(floatingBallEnabled ? "悬浮球已开启。" : "悬浮球已关闭。");
-  } catch (error) {
-    if (!saved) {
-      floatingBallEnabled = previous;
-    }
-    updateFloatingBallButton();
-    setStatus(error instanceof Error ? error.message : String(error));
-  } finally {
-    setButtonBusy(floatingBallButton, false);
-  }
-}
-
-async function openDebugPanel(): Promise<void> {
-  if (!pageTranslationAvailable || activeTabIsPdf) {
-    setStatus("此页面无法打开 Debug，请切换到普通网页。");
-    return;
-  }
-  setButtonBusy(debugButton, true);
-  setStatus("正在打开 Debug...");
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab.id) throw new Error("没有活动标签页。");
-    await sendTabMessage<{ opened: boolean }>(tab.id, {
-      type: "OPEN_TRANSLATION_DEBUG"
-    });
-    setStatus("Debug 已打开。");
-  } catch (error) {
-    setStatus(error instanceof Error ? error.message : String(error));
-  } finally {
-    setButtonBusy(debugButton, false);
-  }
-}
-
 async function clearCache(): Promise<void> {
   setButtonBusy(clearCacheButton, true);
   setStatus("正在清除缓存...");
@@ -724,12 +661,7 @@ function updatePageToggleButton(): void {
   if (pageToggleButton.textContent !== label) pageToggleButton.textContent = label;
 }
 
-function updateFloatingBallButton(): void {
-  if (floatingBallButton.getAttribute("aria-pressed") !== String(floatingBallEnabled)) floatingBallButton.setAttribute("aria-pressed", String(floatingBallEnabled));
-}
-
 function updatePageActionAvailability(): void {
   pageToggleButton.disabled = !pageTranslationAvailable;
   paragraphModeButton.disabled = !paragraphModeAvailable;
-  debugButton.disabled = !pageTranslationAvailable || activeTabIsPdf;
 }

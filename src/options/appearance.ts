@@ -83,7 +83,7 @@ export function setupAppearanceControls(root: HTMLElement): {
       const details = document.createElement("details");
       details.className = "appearance-color-group";
       details.dataset.colorGroup = group.id;
-      details.open = firstRender ? group.id === "floating" || group.id === "translation" : expandedGroups.has(group.id);
+      details.open = firstRender ? group.id === "translation" : expandedGroups.has(group.id);
       const summary = document.createElement("summary");
       summary.textContent = group.label;
       const swatches = document.createElement("span");
@@ -96,7 +96,7 @@ export function setupAppearanceControls(root: HTMLElement): {
       summary.append(swatches);
       const grid = document.createElement("div"); grid.className = "appearance-color-grid";
       details.append(summary);
-      if (group.id !== "floating" && group.id !== "translation") {
+      if (group.id !== "translation") {
         const description = document.createElement("p");
         description.className = "field-description"; description.textContent = group.description;
         details.append(description);
@@ -132,36 +132,6 @@ export function setupAppearanceControls(root: HTMLElement): {
       });
       row.append(text, picker, hex); groups.get(group)!.append(row);
     }
-    const opacityRow = document.createElement("div"); opacityRow.className = "appearance-opacity-row";
-    const opacityLabel = document.createElement("label"); opacityLabel.htmlFor = "floatingOpacityRange"; opacityLabel.textContent = "透明度";
-    const opacityRange = document.createElement("input");
-    opacityRange.type = "range"; opacityRange.id = opacityLabel.htmlFor;
-    opacityRange.min = "0"; opacityRange.max = "100"; opacityRange.step = "1"; opacityRange.value = String(draft.floatingOpacity);
-    opacityRange.title = "数值越低越透明，100% 为完全不透明";
-    const opacityValue = document.createElement("span"); opacityValue.className = "appearance-opacity-value";
-    const opacityNumber = document.createElement("input");
-    opacityNumber.type = "number"; opacityNumber.id = "floatingOpacityNumber";
-    opacityNumber.min = "0"; opacityNumber.max = "100"; opacityNumber.step = "1"; opacityNumber.value = opacityRange.value;
-    opacityNumber.setAttribute("aria-label", "悬浮球透明度百分比");
-    const percent = document.createElement("span"); percent.textContent = "%"; percent.setAttribute("aria-hidden", "true");
-    opacityRange.setAttribute("aria-valuetext", `${draft.floatingOpacity}%`);
-    opacityRange.addEventListener("input", () => {
-      draft.floatingOpacity = Number(opacityRange.value);
-      opacityNumber.value = opacityRange.value; opacityNumber.removeAttribute("aria-invalid");
-      opacityRange.setAttribute("aria-valuetext", `${draft.floatingOpacity}%`);
-      status.textContent = ""; paint();
-    });
-    opacityNumber.addEventListener("input", () => {
-      const value = opacityNumber.valueAsNumber;
-      const valid = Number.isInteger(value) && value >= 0 && value <= 100;
-      opacityNumber.setAttribute("aria-invalid", String(!valid));
-      if (!valid) return;
-      draft.floatingOpacity = value; opacityRange.value = String(value);
-      opacityRange.setAttribute("aria-valuetext", `${value}%`);
-      status.textContent = ""; paint();
-    });
-    opacityValue.append(opacityNumber, percent); opacityRow.append(opacityLabel, opacityRange, opacityValue);
-    groups.get("floating")!.append(opacityRow);
     paint();
   }
 
@@ -238,8 +208,7 @@ export function setupAppearanceControls(root: HTMLElement): {
         const group = invalid.closest("details");
         if (group) group.open = true;
         invalid.focus();
-        throw new Error(invalid === name ? "请填写配色方案名称。" : invalid.id === "floatingOpacityNumber"
-          ? "请输入 0 到 100 之间的整数透明度。" : "请输入完整的十六进制颜色，例如 #116466。");
+        throw new Error(invalid === name ? "请填写配色方案名称。" : "请输入完整的十六进制颜色，例如 #116466。");
       }
       return normalizeAppearance({ ...draft, popupMenu: menu.read() });
     }

@@ -33,9 +33,6 @@ const EXTENSION_OWNED_SELECTOR = [
   "#wupage-video-panel",
   "#wupage-video-overlay",
   ".wupage-translation",
-  "#wupage-floating-hitbox",
-  "#wupage-floating-menu",
-  "#wupage-debug-panel",
   "#wupage-paragraph-highlight"
 ].join(",");
 

@@ -75,7 +75,7 @@ describe("contextual machine translation", () => {
       concurrency: 1,
       pdfTranslationPageRadius: 5,
       cacheEnabled: false,
-      floatingBallEnabled: true,
+
       translateCodeComments: true,
       translationDisplayMode: "bilingual",
       providers: [{
@@ -449,7 +449,7 @@ function createLlmSettings(
     concurrency,
     pdfTranslationPageRadius: 5,
     cacheEnabled: false,
-    floatingBallEnabled: true,
+
     translateCodeComments: true,
     translationDisplayMode: "bilingual",
     providers: [

@@ -55,6 +55,19 @@ describe("content DOM translation extraction", () => {
     expect(collectTextSegments().map(({ text }) => text)).toEqual(["Please review the attached contract."]);
   });
 
+  it("keeps a sentence together when a trailing citation chip with a button sits in the same div", () => {
+    document.body.innerHTML = `<div id="overview"><strong><span>ChatGPT Classic</span></strong> refers to <mark>the previous generation of OpenAI's desktop application for </mark>macOS and Windows.<span class="chip"><span><a href="#"></a><button><div><span>OpenAI Help Center</span></div></button></span></span></div>`;
+    stubLayout();
+    expect(collectTextSegments().map(({ text }) => text))
+      .toEqual(["ChatGPT Classic refers to the previous generation of OpenAI's desktop application for macOS and Windows.", "OpenAI Help Center"]);
+  });
+
+  it("still splits a card whose button is not a trailing inline chip", () => {
+    document.body.innerHTML = `<div id="card">Lightweight tools for sharing extensions.<div><button>Install now</button></div></div>`;
+    stubLayout();
+    expect(collectTextSegments().map(({ text }) => text)).toEqual(["Lightweight tools for sharing extensions.", "Install now"]);
+  });
+
   it.each(["flex", "inline-flex", "grid", "inline-grid"])("keeps card fields separate in a %s layout", (display) => {
     document.body.innerHTML = `<article><div id="fields"><span id="title">A modular library for game extensions</span>
       <span id="author">by <a href="/user/developer">developer</a></span></div>

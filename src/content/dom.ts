@@ -8,7 +8,7 @@ import type { RenderVisibilitySnapshot } from "./visibility";
 import type { TranslationDisplayMode } from "../shared/types";
 import { readImageTextLayout } from "./image-text-layout";
 import { normalizeProtectedText } from "../shared/protected-text";
-import { isDivProseBlock, READABLE_ROOT_SELECTOR } from "./readable-content";
+import { isDivProseBlock, isInlineProseDiv, READABLE_ROOT_SELECTOR } from "./readable-content";
 import {
   clearLegacyScientificParagraphs, isLegacyScientificEquation, isLegacyScientificProseBlock,
   isScientificCitation, isScientificMathImage, legacyScientificProseBlock, prepareLegacyScientificParagraphs
@@ -1520,7 +1520,7 @@ function findGroupingBlock(element: Element | null): Element | null {
   }
 
   const div = element.closest("div");
-  if (div && isDivProseBlock(div)) return constrainGroupingToLayoutSlot(element, div);
+  if (div && (isDivProseBlock(div) || isInlineProseDiv(div))) return constrainGroupingToLayoutSlot(element, div);
 
   const listItem = element.closest("li");
   if (!listItem) return null;

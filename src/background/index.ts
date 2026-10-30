@@ -66,7 +66,7 @@ async function handleMessage(request: RuntimeRequest, sender: chrome.runtime.Mes
     case "TRANSLATE_INPUT": {
       const settings = await getSettings();
       const origins = providerOrigins(pickInputProvider(settings));
-      if (origins.length) await assertProviderAccess(settings, pickInputProvider(settings)!.id);
+      if (origins.length) await assertProviderAccess(settings, pickInputProvider(settings)!.id, "请打开「设置 → 翻译服务」点一次「保存」并允许访问");
       return translateInput(settings, request.text);
     }
     case "PAGE_TRANSLATION_STATE_CHANGED":

@@ -19,6 +19,7 @@ All notable changes to this fork are documented here. The format follows [Keep a
 
 ### Fixed
 - Saving settings no longer asks for access to untouched default LLM endpoints (e.g. `api.anthropic.com`); only the active service and endpoints with an API key are requested.
+- Input translation no longer picks an untouched default LLM entry without an API key (local/LAN endpoints still work keyless), and its missing-access message points to Settings instead of the popup.
 
 ### Removed
 - Floating ball, its menu and the Debug panel (paragraph mode and the transient notice moved to their own modules).

@@ -41,3 +41,12 @@ describe("input translation provider", () => {
     expect(languageName("xx")).toBe("xx");
   });
 });
+
+describe("input translation endpoint readiness", () => {
+  it("ignores untouched defaults without a key but accepts a keyed or local endpoint", () => {
+    expect(pickInputProvider(settings([llm({ apiKey: "", baseURL: "https://api.openai.com/v1" })]))).toBeUndefined();
+    expect(pickInputProvider(settings([llm({ apiKey: "", baseURL: "http://localhost:11434/v1" })]))?.id).toBe("oa");
+    expect(pickInputProvider(settings([llm({ apiKey: "", baseURL: "http://192.168.1.5:8000/v1" })]))?.id).toBe("oa");
+    expect(pickInputProvider(settings([llm({ apiKey: "sk-1" })]))?.id).toBe("oa");
+  });
+});

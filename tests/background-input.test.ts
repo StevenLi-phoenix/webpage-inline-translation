@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SETTINGS } from "../src/shared/defaults";
 import type { ExtensionSettings } from "../src/shared/types";
-import { inputPrompt, languageName, pickInputProvider, translateInput } from "../src/background/input-translation";
+import { INPUT_PROMPT, pickInputProvider, translateInput } from "../src/background/input-translation";
 
 afterEach(() => vi.unstubAllGlobals());
 const llm = (extra: Record<string, unknown> = {}) => ({ type: "openai-compatible", id: "oa", label: "OA", enabled: true, ollamaCompatibility: false, baseURL: "https://llm.test/v1", apiKey: "k", model: "m", systemPrompt: "x", ...extra });
 const settings = (providers: unknown[], active = "google-web-translate"): ExtensionSettings =>
-  ({ ...DEFAULT_SETTINGS, providers: providers as ExtensionSettings["providers"], activeProviderId: active, targetLang: "zh-CN", inputTargetLang: "en" });
+  ({ ...DEFAULT_SETTINGS, providers: providers as ExtensionSettings["providers"], activeProviderId: active, targetLang: "zh-CN" });
 
 describe("input translation provider", () => {
   it("prefers the active LLM and otherwise the first usable one", () => {
@@ -32,13 +32,11 @@ describe("input translation provider", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body));
     const prompt = JSON.stringify(body);
-    expect(prompt).toContain("English");
-    expect(prompt).toContain("Simplified Chinese");
+    expect(prompt).toContain("Chinese and English");
   });
-  it("flips to the reading language when the writing and reading languages coincide", () => {
-    expect(inputPrompt("Japanese")).toContain("translate it into Japanese instead");
-    expect(languageName("zh-CN")).toBe("Simplified Chinese");
-    expect(languageName("xx")).toBe("xx");
+  it("is a fixed Chinese-English pair that does not depend on the page language", () => {
+    expect(INPUT_PROMPT).toContain("mainly in Chinese, translate it into natural English");
+    expect(INPUT_PROMPT).toContain("translate it into Simplified Chinese");
   });
 });
 

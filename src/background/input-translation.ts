@@ -1,29 +1,16 @@
 import type { ExtensionSettings, ProviderConfig } from "../shared/types";
-import { TARGET_LANGUAGES } from "../shared/languages";
 import { createProvider } from "./providers";
 
 type LlmConfig = Extract<ProviderConfig, { type: "openai-compatible" | "anthropic-compatible" }>;
 
-/** English names the LLM understands better than locale codes. */
-const NAMES: Record<string, string> = {
-  "zh-CN": "Simplified Chinese", "zh-TW": "Traditional Chinese", en: "English", ja: "Japanese", ko: "Korean",
-  fr: "French", de: "German", es: "Spanish", ru: "Russian"
-};
-
-export function languageName(code: string): string {
-  return NAMES[code] ?? TARGET_LANGUAGES.find(language => language.code === code)?.label ?? code;
-}
-
-/** The writing assistant prompt; `{{targetLang}}` is filled by the provider's own template step. */
-export function inputPrompt(secondaryName: string): string {
-  return [
-    "You are a translation engine for text the user is typing into a form field.",
-    "Translate each input item into {{targetLang}}.",
-    `If an item is already written in {{targetLang}}, translate it into ${secondaryName} instead.`,
-    "Keep the tone, line breaks, emoji, @mentions, #tags, URLs, numbers, code and placeholders unchanged.",
-    "Output only the translation, with no explanations or quotation marks added."
-  ].join(" ");
-}
+/** Fixed Chinese ⇄ English writing assistant; the provider adds its own JSON-array output rules. */
+export const INPUT_PROMPT = [
+  "You are a translation engine for text the user is typing into a form field.",
+  "Translate each input item between Chinese and English: if it is written mainly in Chinese, translate it into natural English;",
+  "if it is English or any other language, translate it into Simplified Chinese.",
+  "Keep the tone, line breaks, emoji, @mentions, #tags, URLs, numbers, code and placeholders unchanged.",
+  "Output only the translation, with no explanations or quotation marks added."
+].join(" ");
 
 /** Loopback and private-network hosts (Ollama, LM Studio…) legitimately run without an API key. */
 function isLocalEndpoint(baseURL: string): boolean {
@@ -50,10 +37,8 @@ export async function translateInput(settings: ExtensionSettings, text: string, 
   if (!config) throw new Error("输入框翻译需要大模型：请先在「设置 → 翻译服务」填写 OpenAI 兼容或 Anthropic 兼容端点的地址、模型和 API Key。");
   if (!text.trim()) throw new Error("输入框里没有可翻译的文字。");
   if (text.length > 8000) throw new Error("文字过长（上限 8000 字符），请选中一部分后再翻译。");
-  const target = settings.inputTargetLang ?? "en";
-  const secondary = target === settings.targetLang ? (target === "en" ? "zh-CN" : "en") : settings.targetLang;
-  const provider = createProvider({ ...config, systemPrompt: inputPrompt(languageName(secondary)) });
-  const [translation] = await provider.translateBatch({ texts: [text], sourceLang: "auto", targetLang: languageName(target) }, signal);
+  const provider = createProvider({ ...config, systemPrompt: INPUT_PROMPT });
+  const [translation] = await provider.translateBatch({ texts: [text], sourceLang: "auto", targetLang: "English or Simplified Chinese" }, signal);
   if (!translation?.trim()) throw new Error("大模型没有返回译文。");
   return { translation, providerLabel: config.label };
 }

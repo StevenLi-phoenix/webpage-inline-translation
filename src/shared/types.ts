@@ -71,8 +71,6 @@ export interface ExtensionSettings {
   cacheEnabled: boolean;
   contextMenuTranslationEnabled?: boolean;
   imageTranslationEnabled?: boolean;
-  /** Language the input-field translator writes in (the other direction uses `targetLang`). */
-  inputTargetLang?: string;
   translateCodeComments: boolean;
   translationDisplayMode: TranslationDisplayMode;
   providers: ProviderConfig[];

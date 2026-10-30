@@ -59,7 +59,6 @@ export function normalizeSettings(value: unknown): ExtensionSettings {
       typeof input.cacheEnabled === "boolean"
         ? input.cacheEnabled
         : DEFAULT_SETTINGS.cacheEnabled,
-    inputTargetLang: readString(input.inputTargetLang, DEFAULT_SETTINGS.inputTargetLang ?? "en"),
     translateCodeComments:
       typeof input.translateCodeComments === "boolean"
         ? input.translateCodeComments

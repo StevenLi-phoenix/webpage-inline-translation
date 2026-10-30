@@ -23,7 +23,6 @@ const shortcutControls = setupShortcutSettings(query<HTMLElement>("#shortcutSett
 const appearanceControls = setupAppearanceControls(query<HTMLElement>("#appearanceSettings"));
 
 const targetLang = query<HTMLSelectElement>("#targetLang");
-const inputTargetLang = query<HTMLSelectElement>("#inputTargetLang");
 const sourceLang = query<HTMLSelectElement>("#sourceLang");
 const chunkSize = query<HTMLInputElement>("#chunkSize");
 const concurrency = query<HTMLInputElement>("#concurrency");
@@ -125,7 +124,6 @@ function render(): void {
   frameTranslationEnabled.checked = frameTranslation.enabled;
   frameTranslationExcluded.value = frameTranslation.excludeMatches.join("\n");
   renderLanguageOptions(targetLang, settings.targetLang, TARGET_LANGUAGES);
-  renderLanguageOptions(inputTargetLang, settings.inputTargetLang ?? "en", TARGET_LANGUAGES);
   renderLanguageOptions(sourceLang, settings.sourceLang, SOURCE_LANGUAGES);
   chunkSize.value = String(settings.chunkSize);
   concurrency.value = String(settings.concurrency);
@@ -513,7 +511,6 @@ function readSettingsFromForm(): ExtensionSettings {
     frameTranslation: normalizeFrameTranslation({ enabled: frameTranslationEnabled.checked,
       excludeMatches: frameTranslationExcluded.value.split(/\r?\n/u) }),
     targetLang: targetLang.value.trim() || "zh-CN",
-    inputTargetLang: inputTargetLang.value.trim() || "en",
     sourceLang: sourceLang.value.trim() || "auto",
     activeProviderId: settings.activeProviderId,
     chunkSize: Number(chunkSize.value),

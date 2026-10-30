@@ -101,6 +101,14 @@ describe("paragraph translation shortcut", () => {
     expect(requests().flatMap(request => request.texts).filter(text => text.includes("Nested text"))).toHaveLength(1);
     expect(document.querySelectorAll("#card .wupage-translation")).toHaveLength(1);
   });
+  it("translates loose text that sits directly inside a plain div, like a Google rating row", async () => {
+    document.body.insertAdjacentHTML("beforeend", '<div id="rating"><span><span role="img"><span aria-hidden="true">4.2</span><span aria-hidden="true">(2,904)</span></span> · </span>Free · \u200eWindows · \u200eBusiness/Productivity</div>');
+    const range = document.createRange(); range.selectNodeContents(document.querySelector("#rating")!);
+    select(range);
+    await expect(translateShortcutParagraphs()).resolves.toBeUndefined();
+    expect(requests().flatMap(request => request.texts).join(" ")).toContain("Business/Productivity");
+    expect(hasTranslationsIn(document.querySelector("#rating")!)).toBe(true);
+  });
   it.each(["#editable", "#wupage-image-tools p"])("ignores private or extension-owned selections in %s", async selector => {
     const range = document.createRange(); range.selectNodeContents(document.querySelector(selector)!); select(range);
     await expect(translateShortcutParagraphs()).rejects.toThrow("正文段落");

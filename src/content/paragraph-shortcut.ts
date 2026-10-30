@@ -11,6 +11,15 @@ function resolveParagraph(element: Element | null): Element | null {
   return findTranslatableParagraph(element);
 }
 
+/** Pages like Google results leave loose text directly in a classless div that no paragraph rule matches. */
+const LOOSE_TEXT_LIMIT = 500;
+
+/** The text's own parent is the block when nothing smarter exists; excluded or extension-owned elements stay excluded. */
+function resolveLoose(element: Element): Element | null {
+  if (element === document.body || element === document.documentElement || element.closest(`${EXCLUDED},.wupage-translation`)) return null;
+  return element;
+}
+
 /** Keep the saved shortcut ID while routing it through the shared paragraph engine. */
 export async function translateShortcutParagraphs(): Promise<void> {
   const selection = window.getSelection();
@@ -24,7 +33,9 @@ export async function translateShortcutParagraphs(): Promise<void> {
       if (!node.textContent?.trim() || !range.intersectsNode(node)
         || (node === range.startContainer && range.startOffset === node.textContent.length)
         || (node === range.endContainer && range.endOffset === 0)) return;
-      const paragraph = resolveParagraph(node.parentElement);
+      const parent = node.parentElement;
+      const paragraph = resolveParagraph(parent)
+        ?? (parent && (parent.textContent?.length ?? 0) <= LOOSE_TEXT_LIMIT ? resolveLoose(parent) : null);
       if (paragraph) targets.add(paragraph);
     };
     const ancestor = range.commonAncestorContainer;

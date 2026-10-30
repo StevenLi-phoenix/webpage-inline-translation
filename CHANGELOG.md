@@ -23,6 +23,7 @@ All notable changes to this fork are documented here. The format follows [Keep a
 
 - Translating (popup or shortcut) now requests only the translation service; dictionary hosts are requested by the 划词翻译 switch, which is now off by default.
 - Translating a multi-block selection no longer reports "没有可翻译的段落" when only some blocks are blank, and skips blocks nested inside an already selected block.
+- Selecting text that sits directly inside a plain `div` (for example the rating row of a Google result) now translates it instead of reporting "没有可翻译的段落".
 
 ### Removed
 - Floating ball, its menu and the Debug panel (paragraph mode and the transient notice moved to their own modules).

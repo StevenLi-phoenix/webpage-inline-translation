@@ -48,7 +48,7 @@
       "suggested_key": {
         "default": "Alt+A"
       },
-      "description": "翻译当前输入框（LLM）"
+      "description": "翻译输入框 / 选中文字 / 全文"
     },
     "translate-selection": {
       "suggested_key": {

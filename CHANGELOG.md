@@ -5,7 +5,7 @@ All notable changes to this fork are documented here. The format follows [Keep a
 ## [Unreleased]
 
 ### Added
-- Translate the focused input, textarea or rich-text editor with `Option+A` (`Alt+A` elsewhere). It uses the configured OpenAI- or Anthropic-compatible model, honours a selection, writes back through the browser undo stack and never caches typed text. The target language is configurable (`inputTargetLang`, default English).
+- Translate the focused input, textarea or rich-text editor with `Option+A` (`Alt+A` elsewhere). Without a focused field the same key translates the selected text in place, and with no selection the whole page. It uses the configured OpenAI- or Anthropic-compatible model, honours a selection, writes back through the browser undo stack and never caches typed text. The target language is configurable (`inputTargetLang`, default English).
 - On-demand injection (`activeTab` + `scripting`) from the toolbar popup, shortcuts and context menus, with always-on scripts registered only for sites the user granted.
 - Anthropic-compatible default provider entry.
 - Options page lists the live browser bindings of the translation shortcuts and links to the browser's shortcut manager.

@@ -5,7 +5,7 @@ import type { ExtensionSettings, RuntimeRequest } from "../src/shared/types";
 
 const mocks = vi.hoisted(() => ({
   getState: vi.fn(), hasTranslations: vi.fn(), hide: vi.fn(), start: vi.fn(),
-  paragraph: vi.fn(), setParagraph: vi.fn(), refresh: vi.fn(), setMode: vi.fn(), send: vi.fn(), selection: vi.fn()
+  paragraph: vi.fn(), setParagraph: vi.fn(), refresh: vi.fn(), setMode: vi.fn(), send: vi.fn(), selection: vi.fn(), findInput: vi.fn(), translateInput: vi.fn()
 }));
 vi.mock("../src/content/page-translation", () => ({ getPageTranslationState: mocks.getState,
   hidePageTranslation: mocks.hide, startPageTranslation: mocks.start, setPageTranslationDisplayMode: mocks.setMode }));
@@ -13,6 +13,7 @@ vi.mock("../src/content/dom", () => ({ hasPageTranslations: mocks.hasTranslation
 vi.mock("../src/content/paragraph-mode", () => ({ getParagraphMode: mocks.paragraph, setParagraphMode: mocks.setParagraph }));
 vi.mock("../src/content/page-context", () => ({ refreshTranslationState: mocks.refresh }));
 vi.mock("../src/content/runtime", () => ({ sendRuntimeRequest: mocks.send }));
+vi.mock("../src/content/input-translation", () => ({ findInputTarget: mocks.findInput, translateFocusedInput: mocks.translateInput }));
 vi.mock("../src/content/paragraph-shortcut", () => ({ translateShortcutParagraphs: mocks.selection }));
 
 let settings: ExtensionSettings;
@@ -74,6 +75,26 @@ describe("translation shortcut actions", () => {
     mocks.send.mockRejectedValueOnce(new Error("保存失败"));
     await execute("cycle-display-mode"); expect(notice()).toContain("保存失败");
     await execute("cycle-display-mode"); expect(mocks.setMode).toHaveBeenCalledWith("bilingual-accent");
+  });
+  it("routes the input key to the focused field, then the selected text, then the whole page", async () => {
+    mocks.findInput.mockReturnValue(document.createElement("textarea"));
+    await execute("translate-input");
+    expect(mocks.translateInput).toHaveBeenCalledOnce();
+    expect(mocks.selection).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+    mocks.findInput.mockReturnValue(null);
+    document.body.innerHTML = "<p id='p'>Read this paragraph.</p>";
+    const range = document.createRange(); range.selectNodeContents(document.querySelector("#p")!);
+    window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
+    await execute("translate-input");
+    expect(mocks.selection).toHaveBeenCalledOnce();
+    expect(mocks.translateInput).toHaveBeenCalledOnce();
+    expect(mocks.start).not.toHaveBeenCalled();
+    window.getSelection()!.removeAllRanges();
+    await execute("translate-input");
+    expect(mocks.start).toHaveBeenCalledOnce();
+    await execute("translate-input");
+    expect(mocks.hide).toHaveBeenCalledOnce();
   });
   it("toggles paragraph mode and explains its click gesture", async () => {
     mocks.paragraph.mockReturnValue(false);

@@ -19,10 +19,12 @@ async function runCommand(command: string, tab?: chrome.tabs.Tab): Promise<void>
   if (!isTranslationShortcut(command)) return;
   const tabId = tab?.id ?? (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0]?.id;
   if (tabId === undefined) return;
-  // Best effort: the browser only shows its prompt while it still sees the key press.
+  // Ask first and wait: the browser only prompts while it still sees the key press, and the
+  // translation below would otherwise fail while the dialog is still open. A refusal still runs
+  // the command so the page shows why it cannot translate.
   const settings = await getSettings();
   const origins = [...translationOrigins(settings), ...(command === "translate-input" ? providerOrigins(pickInputProvider(settings)) : [])];
-  void requestOrigins(origins).catch(() => false);
+  await requestOrigins(origins).catch(() => false);
   await ensureContent(tabId);
   await chrome.tabs.sendMessage(tabId, { type: "EXECUTE_TRANSLATION_SHORTCUT", command } satisfies RuntimeRequest, { frameId: 0 });
 }

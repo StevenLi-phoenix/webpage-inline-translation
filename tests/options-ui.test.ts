@@ -49,12 +49,10 @@ describe("options provider controls", () => {
 
     await import("../src/options/index");
     await vi.waitFor(() => {
-      expect(document.querySelector("#providerTriggerLabel")?.textContent)
-        .toBe("Microsoft 翻译");
+      expect(query<HTMLSelectElement>("#providerSelect").selectedOptions[0]?.textContent).toBe("Google 翻译");
     });
     expect(document.querySelector("[data-field='apiKey']")).toBeNull();
-    expect(document.querySelector("#providerTriggerIcon [data-provider-icon='microsoft-color']")).not.toBeNull();
-    expect(document.querySelector("#translationFreeHint")).toBeNull();
+    expect(document.querySelector("[data-provider-icon]")).toBeNull();
     expect(document.querySelector("#performanceSettings #pdfTranslationScope")).not.toBeNull();
     expect(document.querySelector("#performanceSettings #chunkSize")).not.toBeNull();
     expect(document.querySelector("#providerForm [data-field='inheritPerformance']")).toBeNull();
@@ -106,83 +104,43 @@ describe("options provider controls", () => {
     query<HTMLInputElement>("[data-field='concurrency']").value = "2";
     click("#save");
     await vi.waitFor(() => {
-      expect(stored.providers.find((entry) => entry.id === "microsoft-web-translate"))
+      expect(stored.providers.find((entry) => entry.id === "google-web-translate"))
         .toMatchObject({ performanceMode: "custom", chunkSize: 800, concurrency: 2 });
     });
 
-    click("#providerTrigger");
-    expect(document.querySelectorAll(".provider-menu-row")).toHaveLength(DEFAULT_SETTINGS.providers.length);
-    expect(document.querySelectorAll(".provider-enable")).toHaveLength(DEFAULT_SETTINGS.providers.length);
-    expect(document.querySelectorAll(".provider-delete")).toHaveLength(0);
-    expect(document.querySelectorAll(".provider-option-type")).toHaveLength(0);
-    expect(document.querySelectorAll(".provider-option .wupage-provider-icon"))
-      .toHaveLength(DEFAULT_SETTINGS.providers.length);
+    const select = query<HTMLSelectElement>("#providerSelect");
+    expect(Array.from(select.options, (option) => option.value)).toEqual(DEFAULT_SETTINGS.providers.map((provider) => provider.id));
+    expect(query<HTMLElement>("#deleteProvider").hidden).toBe(true);
 
-    click("[data-action='select'][data-provider-id='deepseek']");
-    await vi.waitFor(() => {
-      expect(document.querySelector("#providerTriggerLabel")?.textContent).toBe("DeepSeek");
-    });
-    expect(query<HTMLInputElement>("[data-field='baseURL']").value)
-      .toBe("https://api.deepseek.com");
-    expect(query<HTMLSelectElement>("[data-field='model']").value).toBe("deepseek-flash");
-    expect(Array.from(query<HTMLSelectElement>("[data-field='model']").options, (option) => option.value))
-      .toEqual(["deepseek-flash", "deepseek-v4-pro"]);
-    for (const model of ["deepseek-v4-pro", "deepseek-flash"]) {
-      query<HTMLSelectElement>("[data-field='model']").value = model;
-      click("#save");
-      await vi.waitFor(() => {
-        expect(stored.providers.find((entry) => entry.id === "deepseek"))
-          .toMatchObject({ model });
-      });
-    }
-    const providerCount = stored.providers.length;
+    const choose = (id: string): void => {
+      select.value = id;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    choose("openai-compatible");
+    await vi.waitFor(() => expect(query<HTMLInputElement>("[data-field='baseURL']").value).toBe("https://api.openai.com/v1"));
+    expect(query<HTMLInputElement>("[data-field='model']").value).toBe("gpt-4o-mini");
     query<HTMLInputElement>("[data-field='apiKey']").value = "saved-model-test-key";
     query<HTMLInputElement>("[data-field='baseURL']").value = "https://example.com/v1";
-    expect(query<HTMLButtonElement>("#test").closest(".model-toolbar")).not.toBeNull();
-    for (const model of ["custom-model-one", "custom-model-two"]) {
-      click("[data-action='manage-model']");
-      expect(query<HTMLDialogElement>("#modelDialog").hasAttribute("open")).toBe(true);
-      query<HTMLInputElement>("#customModelName").value = model;
-      query<HTMLFormElement>("#modelDialogForm").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-      await vi.waitFor(() => {
-        expect(query<HTMLDialogElement>("#modelDialog").hasAttribute("open")).toBe(false);
-        expect(query<HTMLSelectElement>("[data-field='model']").value).toBe(model);
+    query<HTMLInputElement>("[data-field='model']").value = "custom-model";
+    click("#save");
+    await vi.waitFor(() => {
+      expect(stored.providers.find((entry) => entry.id === "openai-compatible")).toMatchObject({
+        model: "custom-model", apiKey: "saved-model-test-key", baseURL: "https://example.com/v1"
       });
-    }
-    click("[data-action='manage-model']");
-    query<HTMLSelectElement>("#modelAction").value = "edit";
-    query<HTMLSelectElement>("#modelAction").dispatchEvent(new Event("change"));
-    expect(query<HTMLInputElement>("#customModelName").value).toBe("custom-model-two");
-    query<HTMLInputElement>("#customModelName").value = "custom-model-two-edited";
-    query<HTMLFormElement>("#modelDialogForm").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    await vi.waitFor(() => expect(query<HTMLDialogElement>("#modelDialog").hasAttribute("open")).toBe(false));
-    expect(stored.providers).toHaveLength(providerCount);
-    expect(stored.providers.find((entry) => entry.id === "deepseek")).toMatchObject({
-      model: "custom-model-two-edited", customModels: ["custom-model-one", "custom-model-two-edited"],
-      apiKey: "saved-model-test-key", baseURL: "https://example.com/v1"
     });
+    await vi.waitFor(() => expect(document.querySelector("#status")?.textContent).toBe("已保存。"));
     click("#test");
     await vi.waitFor(() => expect(document.querySelector("#status")?.textContent).toBe("测试通过：你好"));
     expect(document.querySelector("#providerForm > [data-role='provider-test-status']")?.textContent).toBe("测试通过：你好");
-    expect(sendMessage).toHaveBeenCalledWith({ type: "TEST_PROVIDER", providerId: "deepseek" });
-    click("#providerTrigger");
-    click("[data-action='select'][data-provider-id='google-web-translate']");
-    await vi.waitFor(() => {
-      expect(document.querySelector("#providerTriggerLabel")?.textContent)
-        .toBe("Google 翻译");
-    });
-    click("#providerTrigger");
-    click("[data-action='select'][data-provider-id='deepseek']");
-    await vi.waitFor(() => expect(query<HTMLSelectElement>("[data-field='model']").value).toBe("custom-model-two-edited"));
-    expect(Array.from(query<HTMLSelectElement>("[data-field='model']").options, (option) => option.value))
-      .toEqual(["deepseek-flash", "deepseek-v4-pro", "custom-model-one", "custom-model-two-edited"]);
+    expect(sendMessage).toHaveBeenCalledWith({ type: "TEST_PROVIDER", providerId: "openai-compatible" });
+    choose("google-web-translate");
+    await vi.waitFor(() => expect(document.querySelector("[data-field='baseURL']")).toBeNull());
+    choose("openai-compatible");
+    await vi.waitFor(() => expect(query<HTMLInputElement>("[data-field='model']").value).toBe("custom-model"));
 
     click("#addProvider");
     expect(document.querySelector("#providerDialog")?.hasAttribute("open")).toBe(true);
-    const kind = query<HTMLSelectElement>("#customProviderKind");
-    kind.value = "llm";
-    kind.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(query<HTMLLabelElement>("#customLlmFormatField").hidden).toBe(false);
+    expect(document.querySelector("#customProviderKind")).toBeNull();
     query<HTMLInputElement>("#customProviderName").value = "My Anthropic";
     query<HTMLSelectElement>("#customLlmFormat").value = "anthropic";
     query<HTMLFormElement>("#providerDialogForm").dispatchEvent(
@@ -190,38 +148,23 @@ describe("options provider controls", () => {
     );
 
     await vi.waitFor(() => {
-      expect(document.querySelector("#providerTriggerLabel")?.textContent).toBe("My Anthropic");
+      expect(query<HTMLSelectElement>("#providerSelect").selectedOptions[0]?.textContent).toBe("My Anthropic");
     });
     expect(stored.providers).toHaveLength(DEFAULT_SETTINGS.providers.length + 1);
     expect(stored.providers.find((provider) => provider.id === stored.activeProviderId)?.type)
       .toBe("anthropic-compatible");
+    expect(query<HTMLElement>("#deleteProvider").hidden).toBe(false);
 
-    click("#providerTrigger");
-    expect(document.querySelectorAll(".provider-delete")).toHaveLength(1);
     const customId = stored.activeProviderId;
-    click(`[data-action="toggle"][data-provider-id="${customId}"]`);
-    await vi.waitFor(() => expect(stored.activeProviderId).toBe("microsoft-web-translate"));
+    click("#providerEnabled");
+    await vi.waitFor(() => expect(stored.activeProviderId).toBe("google-web-translate"));
     expect(stored.providers.find((provider) => provider.id === customId)?.enabled).toBe(false);
 
-    click(`[data-action="delete"][data-provider-id="${customId}"]`);
+    click("#deleteProvider");
     await vi.waitFor(() => {
       expect(stored.providers).toHaveLength(DEFAULT_SETTINGS.providers.length);
-      expect(document.querySelectorAll(".provider-delete")).toHaveLength(0);
+      expect(query<HTMLElement>("#deleteProvider").hidden).toBe(true);
     });
-
-    click("#providerTrigger");
-    click("[data-action='select'][data-provider-id='openai-compatible']");
-    await vi.waitFor(() => expect(document.querySelector("#providerTriggerLabel")?.textContent).toBe("OpenAI Compatible"));
-    expect(query<HTMLSelectElement>("[data-field='ollamaCompatibility']").value).toBe("enabled");
-    for (const value of ["disabled", "enabled"]) {
-      query<HTMLSelectElement>("[data-field='ollamaCompatibility']").value = value;
-      click("#save");
-      await vi.waitFor(() => {
-        const provider = stored.providers.find((entry) => entry.id === "openai-compatible");
-        expect(provider?.type === "openai-compatible" && provider.ollamaCompatibility)
-          .toBe(value === "enabled");
-      });
-    }
   });
 });
 

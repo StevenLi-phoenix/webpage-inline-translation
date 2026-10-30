@@ -19,21 +19,21 @@ describe("provider performance", () => {
       concurrency: 2,
       providers: [
         {
-          type: "zhipu-glm",
-          id: "zhipu-glm",
-          label: "Zhipu GLM",
+          type: "openai-compatible",
+          id: "llm-provider",
+          label: "OpenAI 兼容",
           performanceMode: "custom",
           chunkSize: 3600,
           concurrency: 6,
-          baseURL: "https://open.bigmodel.cn/api/paas/v4",
+          baseURL: "https://example.com/v1",
           apiKey: "",
-          model: "glm-4-flash-250414",
+          model: "gpt-4o-mini",
           systemPrompt: "Translate to {{targetLang}}"
         }
       ]
     });
 
-    expect(getEffectiveProviderPerformance(settings, "zhipu-glm")).toEqual({
+    expect(getEffectiveProviderPerformance(settings, "llm-provider")).toEqual({
       chunkSize: 3600,
       concurrency: 2,
       performanceMode: "custom"

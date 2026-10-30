@@ -136,7 +136,7 @@ describe("selection dictionary UI", () => {
     expect(card().dataset.mode).toBe("translation");
     expect(root().querySelector<HTMLSelectElement>("select")?.hidden).toBe(true);
     expect(root().querySelector<HTMLElement>("footer")?.hidden).toBe(true);
-    expect(root().querySelector(".translation-service")?.textContent).toBe("Microsoft 翻译");
+    expect(root().querySelector(".translation-service")?.textContent).toBe("Google 翻译");
     expect(root().querySelector(".phonetics")).toBeNull();
   });
   it("falls back to translation only when the single word has no dictionary meanings", async () => {

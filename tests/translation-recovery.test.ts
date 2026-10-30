@@ -6,13 +6,9 @@ import { TranslationResponseError } from "../src/background/translation-response
 import { translateProtectedText } from "../src/background/protected-translation";
 
 const providers: ProviderConfig[] = [
-  { type: "openai-compatible", id: "openai-audit", label: "OpenAI", ollamaCompatibility: false,
+  { type: "openai-compatible", id: "openai-audit", label: "OpenAI",
     baseURL: "https://example.com/v1", apiKey: "test", model: "test", systemPrompt: "Translate" },
   { type: "anthropic-compatible", id: "anthropic-audit", label: "Anthropic",
-    baseURL: "https://example.com/v1", apiKey: "test", model: "test", systemPrompt: "Translate" },
-  { type: "deepseek", id: "deepseek-audit", label: "DeepSeek",
-    baseURL: "https://example.com/v1", apiKey: "test", model: "test", systemPrompt: "Translate" },
-  { type: "zhipu-glm", id: "zhipu-audit", label: "GLM",
     baseURL: "https://example.com/v1", apiKey: "test", model: "test", systemPrompt: "Translate" }
 ];
 

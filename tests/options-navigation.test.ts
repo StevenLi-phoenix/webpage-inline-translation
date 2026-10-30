@@ -37,7 +37,7 @@ describe("settings category navigation", () => {
 
   async function mount(): Promise<void> {
     await import("../src/options/index");
-    await vi.waitFor(() => expect(query("#providerTriggerLabel").textContent).toBe("Microsoft 翻译"));
+    await vi.waitFor(() => expect(query<HTMLSelectElement>("#providerSelect").selectedOptions[0]?.textContent).toBe("Google 翻译"));
   }
 
   function navigate(id: string): void {

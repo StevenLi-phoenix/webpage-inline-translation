@@ -29,7 +29,7 @@ describe("background startup compatibility", () => {
   it("allows explicitly testing a disabled service while rejecting ordinary translation requests to it", async () => {
     const settings = structuredClone(DEFAULT_SETTINGS);
     Object.assign(settings.providers.find(provider => provider.id === "openai-compatible")!, {
-      enabled: false, ollamaCompatibility: false, baseURL: "https://example.com/v1", apiKey: "test-key"
+      enabled: false, baseURL: "https://example.com/v1", apiKey: "test-key"
     });
     const stored: Record<string, unknown> = { [SETTINGS_KEY]: settings };
     const addListener = vi.fn();

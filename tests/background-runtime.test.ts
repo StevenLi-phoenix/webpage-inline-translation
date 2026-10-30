@@ -71,15 +71,15 @@ describe("provider errors across runtime messaging", () => {
 
   describe.each(callers)("%s", (_label, send) => {
     it.each([
-      new ProviderError("豆包暂时限流", "rate-limited", 45_000),
-      new ProviderError("需要重新登录豆包", "login-required")
+      new ProviderError("服务暂时限流", "rate-limited", 45_000),
+      new ProviderError("需要重新登录", "login-required")
     ])("preserves error details: $errorCode", async (expected) => {
       const envelope = JSON.parse(JSON.stringify(runtimeErrorResponse(expected)));
       vi.stubGlobal("chrome", {
         runtime: { id: "test-extension", sendMessage: vi.fn().mockResolvedValue(envelope) },
         tabs: { sendMessage: vi.fn().mockResolvedValue(envelope) }
       });
-      const error = await send({ type: "CHECK_DOUBAO" }).catch((reason: unknown) => reason);
+      const error = await send({ type: "GET_SETTINGS" }).catch((reason: unknown) => reason);
       expect(error).toBeInstanceOf(ProviderError);
       expect(error).toMatchObject({ message: expected.message, errorCode: expected.errorCode });
       expect((error as ProviderError).retryAfterMs).toBe(expected.retryAfterMs);

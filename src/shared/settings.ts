@@ -72,14 +72,16 @@ export function normalizeSettings(value: unknown): ExtensionSettings {
 }
 
 /**
- * Settings saved by older versions may hold provider types that no longer exist.
+ * Settings saved by older versions may hold provider types and fields that no longer exist.
  * DeepSeek and Zhipu GLM speak the OpenAI protocol, so a configured entry (one with an
- * API key) becomes an openai-compatible provider; everything else is dropped by the type check.
+ * API key) becomes an openai-compatible provider; every other removed type is dropped by
+ * the type check in isProviderConfig.
  */
 function migrateLegacyProvider(value: unknown): unknown {
-  if (!isRecord(value) || (value.type !== "deepseek" && value.type !== "zhipu-glm")) return value;
-  if (typeof value.apiKey !== "string" || !value.apiKey.trim()) return undefined;
-  const { requestTemplate: _requestTemplate, customModels: _customModels, ...rest } = value;
+  if (!isRecord(value)) return value;
+  const { requestTemplate: _template, ollamaCompatibility: _ollama, customModels: _models, ...rest } = value;
+  if (rest.type !== "deepseek" && rest.type !== "zhipu-glm") return rest;
+  if (typeof rest.apiKey !== "string" || !rest.apiKey.trim()) return undefined;
   return { ...rest, type: "openai-compatible" };
 }
 

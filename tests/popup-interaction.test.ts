@@ -394,22 +394,22 @@ describe("popup translation interactions", () => {
   });
 
   it("synchronizes languages, providers, display mode and automatic rules before saving another field", async () => {
-    stored = { ...stored, sourceLang: "ja", targetLang: "en", activeProviderId: "deepseek", translationDisplayMode: "bilingual-accent",
+    stored = { ...stored, sourceLang: "ja", targetLang: "en", activeProviderId: "anthropic-compatible", translationDisplayMode: "bilingual-accent",
       cacheEnabled: false, autoTranslation: { enabled: true, nonTargetLanguage: true, presetSites: [], customSites: [] },
-      providers: stored.providers.map(entry => entry.id === "deepseek" ? { ...entry, label: "新的服务名称" } : entry.id === "microsoft-web-translate" ? { ...entry, enabled: false } : entry) };
+      providers: stored.providers.map(entry => entry.id === "anthropic-compatible" ? { ...entry, label: "新的服务名称" } : entry.id === "google-web-translate" ? { ...entry, enabled: false } : entry) };
     settingsChanged({ [SETTINGS_KEY]: { newValue: stored } }, "local");
     expect(document.querySelector<HTMLSelectElement>("#sourceLang")!.value).toBe("ja");
     expect(document.querySelector<HTMLSelectElement>("#targetLang")!.value).toBe("en");
     expect(document.querySelector("#sourceLang + .language-value")!.textContent).toBe("日本語");
-    expect(document.querySelector(".wupage-provider-name")!.textContent).toBe("新的服务名称");
-    expect(document.querySelector("#provider option[value='microsoft-web-translate']")).toBeNull();
+    expect(document.querySelector("#provider option[value='anthropic-compatible']")!.textContent).toBe("新的服务名称");
+    expect(document.querySelector("#provider option[value='google-web-translate']")).toBeNull();
     expect(document.querySelector<HTMLSelectElement>("#translationDisplayMode")!.value).toBe("bilingual-accent");
     expect(document.querySelector("#autoTranslation")!.getAttribute("aria-pressed")).toBe("true");
     expect(document.querySelector<HTMLButtonElement>("#addAutoTranslationSite")!.hidden).toBe(false);
     const source = document.querySelector<HTMLSelectElement>("#sourceLang")!;
     source.value = "fr"; source.dispatchEvent(new Event("change"));
     await vi.waitFor(() => expect(stored.sourceLang).toBe("fr"));
-    expect(stored).toMatchObject({ targetLang: "en", activeProviderId: "deepseek", cacheEnabled: false, autoTranslation: { enabled: true } });
+    expect(stored).toMatchObject({ targetLang: "en", activeProviderId: "anthropic-compatible", cacheEnabled: false, autoTranslation: { enabled: true } });
   });
 
   it("queues independent switches so one pending save cannot overwrite another", async () => {

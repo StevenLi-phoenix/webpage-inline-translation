@@ -12,11 +12,11 @@ const bing = `<html><head><title>example - 搜索 词典</title></head><body><di
 
 describe("dictionary settings and input", () => {
   it("migrates old settings and rejects unknown providers/styles", () => {
-    expect(normalizeSettings({}).selectionTranslation).toEqual({ enabled: true, provider: "youdao", style: "dot" });
+    expect(normalizeSettings({}).selectionTranslation).toEqual({ enabled: false, provider: "youdao", style: "dot" });
     expect(normalizeSettings({ selectionTranslation: { enabled: false, provider: "bing", style: "underline" } }).selectionTranslation)
       .toEqual({ enabled: false, provider: "bing", style: "underline" });
     expect(normalizeSettings({ selectionTranslation: { enabled: "true", provider: "evil", style: "unknown" } }).selectionTranslation)
-      .toEqual({ enabled: true, provider: "youdao", style: "dot" });
+      .toEqual({ enabled: false, provider: "youdao", style: "dot" });
   });
   it("normalizes phrases, preserves non-Latin words and bounds selection length", () => {
     expect(normalizeDictionaryQuery("  take\n off  ")).toBe("take off");

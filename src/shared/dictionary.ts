@@ -23,7 +23,7 @@ export interface DictionaryEntry {
 }
 
 export const DICTIONARY_LABELS: Record<DictionaryProvider, string> = { youdao: "有道词典", bing: "Bing 词典" };
-export const DEFAULT_SELECTION_TRANSLATION: SelectionTranslationSettings = { enabled: true, provider: "youdao", style: "dot" };
+export const DEFAULT_SELECTION_TRANSLATION: SelectionTranslationSettings = { enabled: false, provider: "youdao", style: "dot" };
 export const MAX_DICTIONARY_QUERY_LENGTH = 100;
 export const MAX_SELECTION_TEXT_LENGTH = 5000;
 

@@ -75,14 +75,18 @@ export function videoBridgeMatches(): string[] {
 /** Dictionary hosts used by selection translation. */
 export const DICTIONARY_ORIGINS = ["https://dict.youdao.com/*", "https://cn.bing.com/*"];
 
+/** What translating needs: the active service plus the sites the user opted in to. No dictionaries or images. */
+export function translationOrigins(settings: ExtensionSettings): string[] {
+  const active = settings.providers.find(provider => provider.id === settings.activeProviderId);
+  return [...new Set([...providerOrigins(active), ...persistentSiteMatches(settings)])];
+}
+
 /** Every origin the saved settings need the background to reach (not including per-tab activeTab access). */
 export function requiredOrigins(settings: ExtensionSettings): string[] {
-  const active = settings.providers.find(provider => provider.id === settings.activeProviderId);
   return [...new Set([
-    ...providerOrigins(active),
+    ...translationOrigins(settings),
     ...(settings.selectionTranslation?.enabled ? DICTIONARY_ORIGINS : []),
-    ...(settings.imageTranslationEnabled ? ALL_SITES : []),
-    ...persistentSiteMatches(settings)
+    ...(settings.imageTranslationEnabled ? ALL_SITES : [])
   ])];
 }
 

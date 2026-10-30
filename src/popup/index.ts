@@ -1,5 +1,5 @@
 import { sendRuntimeMessage, sendTabMessage } from "../shared/messaging";
-import { documentOrigin, requestOrigins, requiredOrigins } from "../shared/access";
+import { documentOrigin, requestOrigins, requiredOrigins, translationOrigins } from "../shared/access";
 import { SOURCE_LANGUAGES, TARGET_LANGUAGES } from "../shared/languages";
 import { TRANSLATION_DISPLAY_MODES } from "../shared/display-modes";
 import type { ExtensionSettings } from "../shared/types";
@@ -309,7 +309,11 @@ async function togglePageTranslation(): Promise<void> {
   }
   // Ask for host access first: the browser only shows its prompt while this click is fresh.
   const chosen = { ...settings, activeProviderId: provider.value || settings.activeProviderId };
-  if (!pageTranslated && !await authorize(chosen, activeTabIsPdf ? documentOrigin(activePageURL) : undefined)) return;
+  if (!pageTranslated) {
+    // Translating needs only the service (and the PDF's origin); dictionaries are requested by their own switch.
+    const granted = await requestOrigins([...translationOrigins(chosen), ...(activeTabIsPdf ? [documentOrigin(activePageURL)] : []).filter((origin): origin is string => !!origin)]);
+    if (!granted) { setStatus("没有获得访问权限，该功能暂不可用。"); return; }
+  }
   if (activeTabIsPdf) {
     setPageToggleBusy(true);
     setStatus("正在打开 PDF 并开始翻译...");

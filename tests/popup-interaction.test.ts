@@ -25,6 +25,8 @@ describe("popup translation interactions", () => {
     save = vi.fn(async () => undefined);
     paragraph = vi.fn(async (enabled: boolean) => ({ enabled }));
     stored = structuredClone(DEFAULT_SETTINGS);
+    // Selection translation is opt-in now; these tests exercise the switch from the enabled state.
+    stored.selectionTranslation = { ...stored.selectionTranslation!, enabled: true };
     loadSettings = vi.fn(async () => structuredClone(stored));
     const listeners = new Set<typeof settingsChanged>();
     settingsChanged = (changes, area) => { for (const listener of listeners) listener(changes, area); };

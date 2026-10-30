@@ -1,5 +1,5 @@
 import { getSettings } from "../shared/settings";
-import { providerOrigins, requestOrigins, requiredOrigins } from "../shared/access";
+import { providerOrigins, requestOrigins, translationOrigins } from "../shared/access";
 import { isTranslationShortcut } from "../shared/shortcuts";
 import type { RuntimeRequest } from "../shared/types";
 import { ensureContent } from "./inject";
@@ -21,7 +21,7 @@ async function runCommand(command: string, tab?: chrome.tabs.Tab): Promise<void>
   if (tabId === undefined) return;
   // Best effort: the browser only shows its prompt while it still sees the key press.
   const settings = await getSettings();
-  const origins = command === "translate-input" ? providerOrigins(pickInputProvider(settings)) : requiredOrigins(settings);
+  const origins = [...translationOrigins(settings), ...(command === "translate-input" ? providerOrigins(pickInputProvider(settings)) : [])];
   void requestOrigins(origins).catch(() => false);
   await ensureContent(tabId);
   await chrome.tabs.sendMessage(tabId, { type: "EXECUTE_TRANSLATION_SHORTCUT", command } satisfies RuntimeRequest, { frameId: 0 });

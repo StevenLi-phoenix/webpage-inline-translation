@@ -16,7 +16,7 @@ import { injectContentStyles } from "../src/content/styles";
 const settings: ExtensionSettings = {
   targetLang: "zh-CN",
   sourceLang: "auto",
-  activeProviderId: "zhipu-glm",
+  activeProviderId: "llm-provider",
   chunkSize: 1200,
   concurrency: 8,
   pdfTranslationPageRadius: 5,
@@ -208,15 +208,16 @@ describe("viewport page translation", () => {
     document.body.innerHTML = `<main>${texts.map((text, index) => `<p id="p${index}" data-top="${100 + index * 100}">${text}</p>`).join("")}</main>`;
     const options: ExtensionSettings = {
       ...settings,
-      activeProviderId: "doubao-web",
+      activeProviderId: "llm-provider",
       translationDisplayMode: "replace",
-      providers: [{ id: "doubao-web", type: "doubao-web", label: "豆包" }]
+      providers: [{ id: "llm-provider", type: "openai-compatible", label: "OpenAI 兼容", baseURL: "https://example.com/v1",
+        apiKey: "", model: "gpt-4o-mini", systemPrompt: "Translate", performanceMode: "custom", chunkSize: 1200, concurrency: 1 }]
     };
     translateNormally();
     const translate = vi.mocked(sendRuntimeRequest).getMockImplementation()!;
     vi.mocked(sendRuntimeRequest)
       .mockImplementationOnce(translate)
-      .mockRejectedValueOnce(new ProviderError("请登录豆包后重新检测。", "login-required"));
+      .mockRejectedValueOnce(new ProviderError("请重新登录后重试。", "login-required"));
 
     const failed = await startPageTranslation(options);
     expect(failed).toMatchObject({ translated: 1, failed: 1, remaining: 1, errorCode: "login-required" });
@@ -239,7 +240,7 @@ describe("viewport page translation", () => {
     expect(Array.from(document.querySelectorAll("main p"), (paragraph) => paragraph.textContent)).toEqual([...texts, addedText]);
     expect(getPageTranslationState().active).toBe(false);
     vi.mocked(sendRuntimeRequest).mockClear();
-    translateNormally(); // The explicit login/check recovery is handled by the background provider.
+    translateNormally(); // The explicit login recovery is handled by the background provider.
     const recovered = await startPageTranslation(options);
     expect(recovered).toMatchObject({ translated: 4, cached: 1, failed: 0, remaining: 0 });
     expect(recovered.errorCode).toBeUndefined();
@@ -255,13 +256,14 @@ describe("viewport page translation", () => {
     document.body.innerHTML = `<main>${texts.map((text, index) => `<p data-top="${100 + index * 100}">${text}</p>`).join("")}</main>`;
     const options: ExtensionSettings = {
       ...settings,
-      activeProviderId: "doubao-web",
+      activeProviderId: "llm-provider",
       translationDisplayMode: "replace",
-      providers: [{ id: "doubao-web", type: "doubao-web", label: "豆包" }]
+      providers: [{ id: "llm-provider", type: "openai-compatible", label: "OpenAI 兼容", baseURL: "https://example.com/v1",
+        apiKey: "", model: "gpt-4o-mini", systemPrompt: "Translate", performanceMode: "custom", chunkSize: 1200, concurrency: 1 }]
     };
     const startedAt = 1_700_000_000_000;
     const clock = vi.spyOn(Date, "now").mockReturnValue(startedAt);
-    vi.mocked(sendRuntimeRequest).mockRejectedValue(new ProviderError("豆包请求受限。", "rate-limited", 5000));
+    vi.mocked(sendRuntimeRequest).mockRejectedValue(new ProviderError("服务请求受限。", "rate-limited", 5000));
     const failed = await startPageTranslation(options);
     expect(failed).toMatchObject({ translated: 0, failed: 1, remaining: 2, errorCode: "rate-limited", retryAt: startedAt + 5000 });
     expect(getPageTranslationState()).toMatchObject({ pending: 0, errorCode: "rate-limited", retryAt: startedAt + 5000 });
@@ -817,15 +819,15 @@ describe("viewport page translation", () => {
       ...settings,
       providers: [
         {
-          type: "zhipu-glm",
-          id: "zhipu-glm",
-          label: "Zhipu GLM",
+          type: "openai-compatible",
+          id: "llm-provider",
+          label: "OpenAI 兼容",
           performanceMode: "custom",
           chunkSize: 700,
           concurrency: 1,
-          baseURL: "https://open.bigmodel.cn/api/paas/v4",
+          baseURL: "https://example.com/v1",
           apiKey: "",
-          model: "glm-4-flash-250414",
+          model: "gpt-4o-mini",
           systemPrompt: "Translate"
         }
       ]
@@ -853,15 +855,15 @@ describe("viewport page translation", () => {
       ...settings,
       providers: [
         {
-          type: "zhipu-glm",
-          id: "zhipu-glm",
-          label: "Zhipu GLM",
+          type: "openai-compatible",
+          id: "llm-provider",
+          label: "OpenAI 兼容",
           performanceMode: "custom",
           chunkSize: 3200,
           concurrency: 3,
-          baseURL: "https://open.bigmodel.cn/api/paas/v4",
+          baseURL: "https://example.com/v1",
           apiKey: "",
-          model: "glm-4-flash-250414",
+          model: "gpt-4o-mini",
           systemPrompt: "Translate"
         }
       ]

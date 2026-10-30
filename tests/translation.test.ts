@@ -153,24 +153,24 @@ describe("LLM provider queue", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const settings = createLlmSettings("zhipu-glm-queue", 4, 2);
+    const settings = createLlmSettings("llm-provider-queue", 4, 2);
     const first = translateWithSettings(settings, {
       texts: ["hello"],
       sourceLang: "en",
       targetLang: "zh-CN",
-      providerId: "zhipu-glm-queue"
+      providerId: "llm-provider-queue"
     });
     const second = translateWithSettings(settings, {
       texts: ["world"],
       sourceLang: "en",
       targetLang: "zh-CN",
-      providerId: "zhipu-glm-queue"
+      providerId: "llm-provider-queue"
     });
     const third = translateWithSettings(settings, {
       texts: ["again"],
       sourceLang: "en",
       targetLang: "zh-CN",
-      providerId: "zhipu-glm-queue"
+      providerId: "llm-provider-queue"
     });
 
     await vi.advanceTimersByTimeAsync(200);
@@ -198,24 +198,24 @@ describe("LLM provider queue", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const settings = createLlmSettings("zhipu-global-a", 2, 2);
+    const settings = createLlmSettings("llm-global-a", 2, 2);
     settings.providers.push({
       ...settings.providers[0],
-      id: "zhipu-global-b",
-      label: "Zhipu GLM B"
+      id: "llm-global-b",
+      label: "LLM B"
     });
     const requests = [
       translateWithSettings(settings, {
-        texts: ["one"], targetLang: "zh-CN", providerId: "zhipu-global-a"
+        texts: ["one"], targetLang: "zh-CN", providerId: "llm-global-a"
       }),
       translateWithSettings(settings, {
-        texts: ["two"], targetLang: "zh-CN", providerId: "zhipu-global-a"
+        texts: ["two"], targetLang: "zh-CN", providerId: "llm-global-a"
       }),
       translateWithSettings(settings, {
-        texts: ["three"], targetLang: "zh-CN", providerId: "zhipu-global-b"
+        texts: ["three"], targetLang: "zh-CN", providerId: "llm-global-b"
       }),
       translateWithSettings(settings, {
-        texts: ["four"], targetLang: "zh-CN", providerId: "zhipu-global-b"
+        texts: ["four"], targetLang: "zh-CN", providerId: "llm-global-b"
       })
     ];
 
@@ -240,23 +240,23 @@ describe("LLM provider queue", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const request = translateWithSettings(createLlmSettings("zhipu-glm-debug", 1), {
+    const request = translateWithSettings(createLlmSettings("llm-provider-debug", 1), {
       texts: ["hello"],
       sourceLang: "en",
       targetLang: "zh-CN",
-      providerId: "zhipu-glm-debug"
+      providerId: "llm-provider-debug"
     });
 
     await vi.runAllTimersAsync();
     await request;
 
     const task = getTranslationDebugSnapshot().tasks.find(
-      (entry) => entry.providerId === "zhipu-glm-debug"
+      (entry) => entry.providerId === "llm-provider-debug"
     );
     expect(task).toBeDefined();
     if (!task) throw new Error("Missing debug task.");
     expect(task).toMatchObject({
-      providerId: "zhipu-glm-debug",
+      providerId: "llm-provider-debug",
       status: "succeeded",
       textCount: 1,
       charCount: 5
@@ -283,11 +283,11 @@ describe("LLM provider queue", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(translateWithSettings(createLlmSettings("zhipu-recovery", 2), {
+    await expect(translateWithSettings(createLlmSettings("llm-recovery", 2), {
       texts: ["first", "second", "third"],
       sourceLang: "en",
       targetLang: "zh-CN",
-      providerId: "zhipu-recovery"
+      providerId: "llm-recovery"
     })).resolves.toEqual({
       translations: ["译文：first", "译文：second", "译文：third"],
       cached: 0
@@ -318,20 +318,20 @@ describe("LLM provider queue", () => {
       };
     });
     vi.stubGlobal("fetch", fetchMock);
-    const settings = createLlmSettings("zhipu-context-cache", 1);
+    const settings = createLlmSettings("llm-context-cache", 1);
     settings.cacheEnabled = true;
 
     const typeTheory = await translateWithSettings(settings, {
       texts: ["variance"],
       context: "This article is about a type system and subtyping.",
       targetLang: "zh-CN",
-      providerId: "zhipu-context-cache"
+      providerId: "llm-context-cache"
     });
     const statistics = await translateWithSettings(settings, {
       texts: ["variance"],
       context: "This article is about statistics and probability.",
       targetLang: "zh-CN",
-      providerId: "zhipu-context-cache"
+      providerId: "llm-context-cache"
     });
 
     expect(typeTheory.translations).toEqual(["型变"]);
@@ -358,7 +358,7 @@ describe("LLM provider queue", () => {
     await translateWithSettings(settings, request);
     expect((await translateWithSettings(settings, request)).cached).toBe(1);
     const provider = settings.providers[0];
-    if (provider.type !== "zhipu-glm") throw new Error("Unexpected provider");
+    if (provider.type !== "openai-compatible") throw new Error("Unexpected provider");
     provider.model = "another-model";
     expect((await translateWithSettings(settings, request)).cached).toBe(0);
     provider.systemPrompt = "Translate formal emails into {{targetLang}}";
@@ -454,15 +454,15 @@ function createLlmSettings(
     translationDisplayMode: "bilingual",
     providers: [
       {
-        type: "zhipu-glm",
+        type: "openai-compatible",
         id: providerId,
-        label: "Zhipu GLM",
+        label: "OpenAI 兼容",
         performanceMode: "custom",
         chunkSize: 3200,
         concurrency: providerConcurrency,
-        baseURL: "https://open.bigmodel.cn/api/paas/v4",
+        baseURL: "https://example.com/v1",
         apiKey: "secret",
-        model: "glm-4-flash-250414",
+        model: "gpt-4o-mini",
         systemPrompt: "Translate to {{targetLang}}"
       }
     ]

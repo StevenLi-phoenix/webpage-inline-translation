@@ -169,13 +169,11 @@ try {
   check('content script translation, protected code, draft exclusion, display modes and clear');
 
   const provider = settings.providers.find(entry => entry.id === 'openai-compatible');
-  Object.assign(provider, { baseURL: `${origin}/v1`, apiKey: 'test-only', model: 'fixture', ollamaCompatibility: true });
+  Object.assign(provider, { baseURL: `${origin}/v1`, apiKey: 'test-only', model: 'fixture' });
   await runtime({ type: 'SAVE_SETTINGS', settings: { ...settings, activeProviderId: provider.id } });
   assert.match((await runtime({ type: 'TEST_PROVIDER', providerId: provider.id })).translation, /译文/);
-  assert.equal(origins.at(-1), null, 'Ollama request must not carry Origin');
-  assert.deepEqual(await api('return chrome.declarativeNetRequest.getSessionRules();'), []);
   await runtime({ type: 'SAVE_SETTINGS', settings });
-  check('OpenAI/Ollama requests, Origin removal and session rule cleanup');
+  check('OpenAI-compatible request');
 
   await select(page);
   await firefox.command('WebDriver:Navigate', { url: `${firefox.base}pdf.html?url=${encodeURIComponent(`${origin}/fixture.pdf`)}&translate=1` });

@@ -1,22 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SETTINGS_KEY } from "../src/shared/defaults";
+import { DEFAULT_SETTINGS, SETTINGS_KEY } from "../src/shared/defaults";
 import { getEffectiveProviderPerformance } from "../src/shared/performance";
 import { getSettings, normalizeSettings, saveSettings } from "../src/shared/settings";
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
+const PROMPT = "Translate to {{targetLang}}";
+
 describe("normalizeSettings", () => {
-  it("keeps custom model choices without losing provider credentials", () => {
-    const settings = normalizeSettings({
-      activeProviderId: "deepseek",
-      providers: [{ type: "deepseek", id: "deepseek", label: "DeepSeek",
-        baseURL: "https://example.com/v1", apiKey: "saved-key", model: "custom-model", systemPrompt: "Translate",
-        customModels: [" custom-model ", "", "custom-model", false, null, "another-model"] }]
-    });
-    expect(settings.providers.find((provider) => provider.id === "deepseek")).toMatchObject({
-      model: "custom-model", customModels: ["custom-model", "another-model"], apiKey: "saved-key"
-    });
-  });
   it("uses defaults for invalid input", () => {
     const settings = normalizeSettings({
       targetLang: "",
@@ -26,13 +17,24 @@ describe("normalizeSettings", () => {
     });
 
     expect(settings.targetLang).toBe("zh-CN");
-    expect(settings.activeProviderId).toBe("microsoft-web-translate");
+    expect(settings.activeProviderId).toBe("google-web-translate");
     expect(settings.chunkSize).toBe(4000);
     expect(settings.concurrency).toBe(1);
     expect(settings.translateCodeComments).toBe(true);
     expect(settings.imageTranslationEnabled).toBe(false);
     expect(settings.translationDisplayMode).toBe("bilingual");
     expect(settings.providers.length).toBeGreaterThan(0);
+  });
+
+  it("ships exactly the four supported providers", () => {
+    expect(DEFAULT_SETTINGS.providers.map((provider) => [provider.id, provider.type, provider.label])).toEqual([
+      ["google-web-translate", "google-web-translate", "Google 翻译"],
+      ["openai-compatible", "openai-compatible", "OpenAI 兼容"],
+      ["anthropic-compatible", "anthropic-compatible", "Anthropic 兼容"],
+      ["firefox-local", "firefox-local", "Firefox 本地翻译（实验）"]
+    ]);
+    expect(DEFAULT_SETTINGS.providers.find((provider) => provider.id === "anthropic-compatible"))
+      .toMatchObject({ baseURL: "https://api.anthropic.com", model: "claude-haiku-5-5" });
   });
 
   it("preserves a disabled code comment translation setting", () => {
@@ -75,32 +77,23 @@ describe("normalizeSettings", () => {
           baseURL: "https://example.com/v1",
           apiKey: "key",
           model: "model",
-          systemPrompt: "Translate to {{targetLang}}"
+          systemPrompt: PROMPT
         }
       ]
     });
 
     expect(settings.activeProviderId).toBe("openai-compatible");
-    expect(settings.providers.find((provider) => provider.id === "doubao-web"))
-      .toMatchObject({ enabled: true, chunkSize: 1200, concurrency: 1 });
     expect(settings.providers.find((provider) => provider.id === "openai-compatible"))
       .toMatchObject({
+        label: "OpenAI 兼容",
         performanceMode: "custom",
         chunkSize: 3200,
         concurrency: 3
       });
     expect(settings.providers.map((provider) => provider.id)).toEqual([
-      "microsoft-web-translate",
       "google-web-translate",
-      "doubao-web",
-      "tencent-transmart",
-      "yandex-web-translate",
-      "volcengine-web-translate",
-      "mymemory",
       "openai-compatible",
-      "deepseek",
-      "zhipu-glm",
-      "http-template",
+      "anthropic-compatible",
       "firefox-local"
     ]);
   });
@@ -111,67 +104,24 @@ describe("normalizeSettings", () => {
       concurrency: 2,
       providers: [
         {
-          type: "zhipu-glm",
-          id: "zhipu-glm",
-          label: "Zhipu GLM",
+          type: "anthropic-compatible",
+          id: "anthropic-compatible",
+          label: "Anthropic 兼容",
           performanceMode: "inherit",
           chunkSize: 3900,
           concurrency: 8,
-          baseURL: "https://open.bigmodel.cn/api/paas/v4",
+          baseURL: "https://api.anthropic.com",
           apiKey: "",
-          model: "glm-4-flash-250414",
-          systemPrompt: "Translate to {{targetLang}}"
+          model: "claude-haiku-5-5",
+          systemPrompt: PROMPT
         }
       ]
     });
 
-    expect(settings.providers.find((provider) => provider.id === "zhipu-glm"))
+    expect(settings.providers.find((provider) => provider.id === "anthropic-compatible"))
       .toMatchObject({ performanceMode: "inherit" });
-    expect(settings.providers.find((provider) => provider.id === "zhipu-glm")?.chunkSize)
+    expect(settings.providers.find((provider) => provider.id === "anthropic-compatible")?.chunkSize)
       .toBeUndefined();
-  });
-
-  it.each(["google-web-translate", "microsoft-translator", "deepseek"])(
-    "migrates legacy Azure credentials while preserving the selected service %s", (activeProviderId) => {
-      const settings = normalizeSettings({
-        activeProviderId,
-        providers: [{
-          type: "microsoft-translator", id: "microsoft-translator", label: "My Azure",
-          endpoint: "https://api.cognitive.microsofttranslator.com", apiKey: "saved-key", region: "eastasia"
-        }]
-      });
-      expect(settings.activeProviderId).toBe(activeProviderId === "microsoft-translator" ? "microsoft-web-translate" : activeProviderId);
-      expect(settings.providers.find((entry) => entry.id === "microsoft-web-translate"))
-        .toMatchObject({ type: "microsoft-web-translate", enabled: true });
-      for (const id of ["tencent-transmart", "yandex-web-translate", "volcengine-web-translate", "mymemory"]) {
-        expect(settings.providers.find(entry => entry.id === id)).toMatchObject({ type: id, enabled: true });
-      }
-      expect(settings.providers.find((entry) => entry.id === "microsoft-web-translate"))
-        .toMatchObject({ serviceMode: activeProviderId === "microsoft-translator" ? "api" : "free",
-          api: { apiKey: "saved-key", region: "eastasia" } });
-      expect(settings.providers.some(entry => entry.id === "microsoft-translator")).toBe(false);
-    }
-  );
-
-  it.each([
-    ["deepseek-v4-flash", "deepseek-flash"],
-    ["deepseek-v4-flash-vision-exp", "deepseek-flash"],
-    ["deepseek-flash", "deepseek-flash"],
-    ["deepseek-v4-pro", "deepseek-v4-pro"],
-    ["custom-model", "custom-model"]
-  ])("normalizes saved DeepSeek model %s to %s", (model, expectedModel) => {
-    const saved = normalizeSettings(undefined).providers.find((provider) => provider.type === "deepseek")!;
-    const settings = normalizeSettings({
-      activeProviderId: saved.id,
-      providers: [{ ...saved, model, apiKey: "saved-key", baseURL: "https://example.com/v1" }]
-    });
-
-    expect(settings.activeProviderId).toBe(saved.id);
-    expect(settings.providers.find((provider) => provider.id === saved.id)).toMatchObject({
-      model: expectedModel,
-      apiKey: "saved-key",
-      baseURL: "https://example.com/v1"
-    });
   });
 
   it("preserves custom providers and falls back when the active provider is disabled", () => {
@@ -181,12 +131,12 @@ describe("normalizeSettings", () => {
         {
           type: "openai-compatible",
           id: "openai-compatible",
-          label: "OpenAI Compatible",
+          label: "OpenAI 兼容",
           enabled: false,
           baseURL: "https://api.openai.com/v1",
           apiKey: "",
           model: "gpt-4o-mini",
-          systemPrompt: "Translate to {{targetLang}}"
+          systemPrompt: PROMPT
         },
         {
           type: "anthropic-compatible",
@@ -196,7 +146,7 @@ describe("normalizeSettings", () => {
           baseURL: "https://api.anthropic.com/v1",
           apiKey: "secret",
           model: "claude-test",
-          systemPrompt: "Translate to {{targetLang}}"
+          systemPrompt: PROMPT
         }
       ]
     });
@@ -204,7 +154,7 @@ describe("normalizeSettings", () => {
     expect(settings.providers.find((provider) => provider.id === "openai-compatible")?.enabled)
       .toBe(false);
     expect(settings.providers.some((provider) => provider.id === "custom-anthropic-test")).toBe(true);
-    expect(settings.activeProviderId).toBe("microsoft-web-translate");
+    expect(settings.activeProviderId).toBe("google-web-translate");
   });
 
   it("keeps at least one provider enabled", () => {
@@ -215,57 +165,103 @@ describe("normalizeSettings", () => {
     const settings = normalizeSettings({ providers: disabledProviders });
 
     expect(settings.providers.filter((provider) => provider.enabled !== false)).toHaveLength(1);
-    expect(settings.activeProviderId).toBe("microsoft-web-translate");
+    expect(settings.activeProviderId).toBe("google-web-translate");
   });
 
-  it.each([true, false, undefined, "true"])("defaults Ollama compatibility on and preserves explicit opt-out: %s", (value) => {
-    const saved = normalizeSettings(undefined).providers.find((provider) => provider.type === "openai-compatible")!;
-    const settings = normalizeSettings({ providers: [{ ...saved, ollamaCompatibility: value }] });
-    const provider = settings.providers.find((entry) => entry.type === "openai-compatible");
-    expect(provider?.type === "openai-compatible" && provider.ollamaCompatibility)
-      .toBe(value !== false);
+  it("drops fields of removed features from LLM providers", () => {
+    const settings = normalizeSettings({
+      providers: [{
+        type: "openai-compatible", id: "openai-compatible", label: "OpenAI 兼容",
+        baseURL: "https://example.com/v1", apiKey: "key", model: "m", systemPrompt: PROMPT,
+        requestTemplate: { enabled: true, headers: "{}", body: "{}" }, ollamaCompatibility: false,
+        customModels: ["a"]
+      }]
+    });
+    const provider = settings.providers.find((entry) => entry.id === "openai-compatible")!;
+    expect(provider).toMatchObject({ apiKey: "key", model: "m" });
+    for (const removed of ["requestTemplate", "ollamaCompatibility", "customModels"]) {
+      expect(provider).not.toHaveProperty(removed);
+    }
   });
 });
 
-describe("Doubao settings migration", () => {
-  it("retains an explicitly selected Doubao configuration across normalization", () => {
-    const normalized = normalizeSettings({
-      activeProviderId: "my-doubao",
-      providers: [{ type: "doubao-web", id: "my-doubao", label: "我的豆包", enabled: true }]
-    });
+describe("legacy provider migration", () => {
+  const removed = [
+    { type: "doubao-web", id: "doubao-web", label: "豆包" },
+    { type: "microsoft-web-translate", id: "microsoft-web-translate", label: "Microsoft 翻译", serviceMode: "api", api: { apiKey: "k" } },
+    { type: "tencent-transmart", id: "tencent-transmart", label: "腾讯翻译" },
+    { type: "yandex-web-translate", id: "yandex-web-translate", label: "Yandex 翻译" },
+    { type: "volcengine-web-translate", id: "volcengine-web-translate", label: "火山翻译" },
+    { type: "mymemory", id: "mymemory", label: "MyMemory" },
+    { type: "microsoft-translator", id: "microsoft-translator", label: "Azure", endpoint: "https://e", apiKey: "k", region: "r" },
+    { type: "google-cloud-translation", id: "google-cloud-translation", label: "GCP", apiKey: "k" },
+    { type: "http-template", id: "http-template", label: "HTTP", method: "POST", url: "https://x", headers: {}, bodyTemplate: "{}", responsePath: "a" }
+  ];
 
-    expect(normalized.activeProviderId).toBe("my-doubao");
-    expect(normalized.providers.find((provider) => provider.id === "my-doubao"))
-      .toMatchObject({ type: "doubao-web", label: "我的豆包", enabled: true });
-    expect(normalizeSettings(normalized)).toEqual(normalized);
+  it("drops providers whose type was removed", () => {
+    const settings = normalizeSettings({ providers: removed });
+    expect(settings.providers.map((provider) => provider.id)).toEqual([
+      "google-web-translate", "openai-compatible", "anthropic-compatible", "firefox-local"
+    ]);
   });
 
-  it("updates the previous built-in label without overwriting custom names", () => {
-    const previousLabel = "豆包（网页登录，实验）";
-    const result = normalizeSettings({
-      activeProviderId: "doubao-web",
-      providers: [
-        { type: "doubao-web", id: "doubao-web", label: previousLabel, enabled: false },
-        { type: "doubao-web", id: "my-doubao", label: previousLabel }
-      ]
-    });
-    expect(result.providers.find((provider) => provider.id === "doubao-web"))
-      .toMatchObject({ label: "豆包（实验性）", enabled: false });
-    expect(result.providers.find((provider) => provider.id === "my-doubao")?.label).toBe(previousLabel);
-    const renamed = normalizeSettings({
-      providers: [{ type: "doubao-web", id: "doubao-web", label: "我的豆包" }]
-    });
-    expect(renamed.providers.find((provider) => provider.id === "doubao-web")?.label).toBe("我的豆包");
-    expect(normalizeSettings(result)).toEqual(result);
+  it("falls back to Google when the stored active provider no longer exists", () => {
+    for (const activeProviderId of removed.map((entry) => entry.id).concat("never-existed")) {
+      expect(normalizeSettings({ activeProviderId, providers: removed }).activeProviderId)
+        .toBe("google-web-translate");
+    }
   });
 
-  it("preserves disabled Doubao through storage round trips and discards unsupported credential fields", async () => {
-    let saved: unknown = {
-      activeProviderId: "google-web-translate",
+  it("keeps Google web translate free of the old service-mode options", () => {
+    const settings = normalizeSettings({
+      providers: [{ type: "google-web-translate", id: "google-web-translate", label: "Google Web Translate" }]
+    });
+    expect(settings.providers[0]).toMatchObject({ label: "Google 翻译", type: "google-web-translate" });
+  });
+
+  it.each([
+    ["deepseek", "https://api.deepseek.com", "deepseek-flash", "DeepSeek"],
+    ["zhipu-glm", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash-250414", "Zhipu GLM"]
+  ])("migrates a configured %s entry to openai-compatible and keeps it active", (id, baseURL, model, label) => {
+    const settings = normalizeSettings({
+      activeProviderId: id,
       providers: [{
-        type: "doubao-web", id: "doubao-web", label: "豆包", enabled: false,
-        apiKey: "not-a-supported-field", cookie: "not-a-supported-field", webId: "not-a-supported-field"
+        type: id, id, label, enabled: true, baseURL, apiKey: "saved-key", model, systemPrompt: "Custom prompt",
+        performanceMode: "custom", chunkSize: 2000, concurrency: 2,
+        requestTemplate: { enabled: true, headers: "{}", body: "{}" }, customModels: ["x"]
       }]
+    });
+    expect(settings.activeProviderId).toBe(id);
+    const migrated = settings.providers.find((provider) => provider.id === id)!;
+    expect(migrated).toMatchObject({
+      type: "openai-compatible", id, label, baseURL, apiKey: "saved-key", model, systemPrompt: "Custom prompt",
+      enabled: true, performanceMode: "custom", chunkSize: 2000, concurrency: 2
+    });
+    expect(migrated).not.toHaveProperty("customModels");
+    expect(migrated).not.toHaveProperty("requestTemplate");
+    expect(settings.providers.map((provider) => provider.id)).toEqual([
+      "google-web-translate", "openai-compatible", "anthropic-compatible", "firefox-local", id
+    ]);
+    expect(normalizeSettings(settings)).toEqual(settings);
+  });
+
+  it.each(["deepseek", "zhipu-glm"])("drops an unconfigured %s entry", (id) => {
+    const settings = normalizeSettings({
+      activeProviderId: id,
+      providers: [{ type: id, id, label: id, baseURL: "https://x", apiKey: "  ", model: "m", systemPrompt: PROMPT }]
+    });
+    expect(settings.providers.some((provider) => provider.id === id)).toBe(false);
+    expect(settings.activeProviderId).toBe("google-web-translate");
+  });
+
+  it("round-trips through storage after migrating legacy settings", async () => {
+    let saved: unknown = {
+      activeProviderId: "deepseek",
+      providers: [
+        { type: "doubao-web", id: "doubao-web", label: "豆包", enabled: false },
+        { type: "deepseek", id: "deepseek", label: "DeepSeek", baseURL: "https://api.deepseek.com",
+          apiKey: "saved-key", model: "deepseek-flash", systemPrompt: PROMPT }
+      ]
     };
     const set = vi.fn(async (value: Record<string, unknown>) => { saved = value[SETTINGS_KEY]; });
     vi.stubGlobal("chrome", { storage: { local: {
@@ -276,29 +272,32 @@ describe("Doubao settings migration", () => {
     await saveSettings(loaded);
     const reloaded = await getSettings();
 
-    expect(reloaded.activeProviderId).toBe("google-web-translate");
-    expect(reloaded.providers.find((provider) => provider.id === "doubao-web")).toEqual({
-      type: "doubao-web", id: "doubao-web", label: "豆包", enabled: false,
-      performanceMode: "custom", chunkSize: 1200, concurrency: 1
-    });
     expect(reloaded).toEqual(loaded);
-    expect(set).toHaveBeenCalledTimes(1);
+    expect(reloaded.activeProviderId).toBe("deepseek");
+    expect(reloaded.providers.find((provider) => provider.id === "deepseek")?.type).toBe("openai-compatible");
+    expect(reloaded.providers.some((provider) => provider.id === "doubao-web")).toBe(false);
   });
+});
 
-  it("keeps Doubao conservative when legacy global settings or edited provider fields request more concurrency", () => {
+describe("provider performance", () => {
+  it("lets providers override chunk size and concurrency within the global limits", () => {
     const result = normalizeSettings({
-      activeProviderId: "doubao-web", chunkSize: 4000, concurrency: 8,
+      chunkSize: 1000, concurrency: 4,
       providers: [{
-        type: "doubao-web", id: "doubao-web", label: "豆包", enabled: true,
-        performanceMode: "inherit", chunkSize: 4000, concurrency: 8
+        type: "openai-compatible", id: "openai-compatible", label: "OpenAI 兼容", baseURL: "https://x/v1",
+        apiKey: "", model: "m", systemPrompt: PROMPT, performanceMode: "custom", chunkSize: 2400, concurrency: 8
       }]
     });
-
-    expect(getEffectiveProviderPerformance(result)).toEqual({
-      performanceMode: "custom", chunkSize: 1200, concurrency: 1
+    expect(getEffectiveProviderPerformance(result, "openai-compatible")).toEqual({
+      performanceMode: "custom", chunkSize: 2400, concurrency: 4
     });
-    expect(result.chunkSize).toBe(4000);
-    expect(result.concurrency).toBe(8);
-    expect(getEffectiveProviderPerformance(result, "google-web-translate").concurrency).toBe(8);
+    expect(getEffectiveProviderPerformance(result, "google-web-translate")).toMatchObject({
+      performanceMode: "inherit", chunkSize: 1000, concurrency: 4
+    });
+  });
+
+  it("keeps the local engine at fixed conservative limits", () => {
+    const result = normalizeSettings({ activeProviderId: "firefox-local", chunkSize: 4000, concurrency: 8 });
+    expect(getEffectiveProviderPerformance(result)).toEqual({ performanceMode: "custom", chunkSize: 800, concurrency: 1 });
   });
 });

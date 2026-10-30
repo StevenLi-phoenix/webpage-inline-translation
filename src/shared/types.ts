@@ -4,21 +4,10 @@ import type { VideoTranslationSettings } from "./video";
 import type { ShortcutEnabledSettings, ShortcutSettings, TranslationShortcut } from "./shortcuts";
 
 export type ProviderType =
-  | "doubao-web"
-  | "firefox-local"
-  | "microsoft-web-translate"
   | "google-web-translate"
-  | "tencent-transmart"
-  | "yandex-web-translate"
-  | "volcengine-web-translate"
-  | "mymemory"
-  | "microsoft-translator"
-  | "google-cloud-translation"
   | "openai-compatible"
   | "anthropic-compatible"
-  | "deepseek"
-  | "zhipu-glm"
-  | "http-template";
+  | "firefox-local";
 
 export type TranslationDisplayMode = "replace" | "bilingual" | "bilingual-accent";
 
@@ -29,103 +18,25 @@ export interface ProviderBaseConfig {
   performanceMode?: "inherit" | "custom";
   chunkSize?: number;
   concurrency?: number;
-  /** Additional model IDs saved for this provider. */
-  customModels?: string[];
 }
 
-export interface TranslationApiOptions {
-  apiKey?: string;
-  endpoint?: string;
-  region?: string;
-  folderId?: string;
-  accessKeyId?: string;
-  secretAccessKey?: string;
-  model?: string;
-}
-
-export interface DualServiceConfig extends ProviderBaseConfig {
-  serviceMode?: "free" | "api";
-  api?: TranslationApiOptions;
-}
-
-export interface GoogleWebTranslateConfig extends DualServiceConfig {
+export interface GoogleWebTranslateConfig extends ProviderBaseConfig {
   type: "google-web-translate";
-}
-
-export interface MicrosoftWebTranslateConfig extends DualServiceConfig {
-  type: "microsoft-web-translate";
-}
-
-export interface TencentTransmartConfig extends DualServiceConfig {
-  type: "tencent-transmart";
-}
-
-export interface YandexWebTranslateConfig extends DualServiceConfig {
-  type: "yandex-web-translate";
-}
-
-export interface VolcengineWebTranslateConfig extends DualServiceConfig {
-  type: "volcengine-web-translate";
-}
-
-export interface MyMemoryConfig extends DualServiceConfig {
-  type: "mymemory";
-}
-
-export interface DoubaoWebConfig extends ProviderBaseConfig {
-  type: "doubao-web";
-}
-
-export type DoubaoStatusState = "unknown" | "checking" | "ready" | "login-required"
-  | "rate-limited" | "service-rejected" | "permission-required" | "network-error"
-  | "timeout" | "protocol-changed" | "incomplete" | "unsupported-browser" | "unsupported-language";
-
-export interface DoubaoStatus {
-  state: DoubaoStatusState;
-  checkedAt?: number;
-  message?: string;
-  retryAt?: number;
 }
 
 export interface FirefoxLocalConfig extends ProviderBaseConfig {
   type: "firefox-local";
 }
 
-export interface MicrosoftTranslatorConfig extends ProviderBaseConfig {
-  type: "microsoft-translator";
-  endpoint: string;
-  apiKey: string;
-  region: string;
-}
-
-export interface GoogleCloudTranslationConfig extends ProviderBaseConfig {
-  type: "google-cloud-translation";
-  apiKey: string;
-}
-
-export interface LlmRequestTemplate {
-  enabled: boolean;
-  /** JSON object: string values override headers; null removes them. */
-  headers: string;
-  /** JSON merge patch applied to the generated request body. */
-  body: string;
-}
-
-export interface LlmProviderBaseConfig extends ProviderBaseConfig {
-  requestTemplate?: LlmRequestTemplate;
-}
-
-export interface OpenAICompatibleConfig extends LlmProviderBaseConfig {
+export interface OpenAICompatibleConfig extends ProviderBaseConfig {
   type: "openai-compatible";
   baseURL: string;
   apiKey: string;
   model: string;
   systemPrompt: string;
-  /** Enabled by default, including for settings saved before this option existed. */
-  ollamaCompatibility?: boolean;
 }
 
-export interface AnthropicCompatibleConfig extends LlmProviderBaseConfig {
+export interface AnthropicCompatibleConfig extends ProviderBaseConfig {
   type: "anthropic-compatible";
   baseURL: string;
   apiKey: string;
@@ -133,52 +44,13 @@ export interface AnthropicCompatibleConfig extends LlmProviderBaseConfig {
   systemPrompt: string;
 }
 
-export interface DeepSeekConfig extends LlmProviderBaseConfig {
-  type: "deepseek";
-  baseURL: string;
-  apiKey: string;
-  model: string;
-  systemPrompt: string;
-}
-
-export interface ZhipuGlmConfig extends LlmProviderBaseConfig {
-  type: "zhipu-glm";
-  baseURL: string;
-  apiKey: string;
-  model: string;
-  systemPrompt: string;
-}
-
-export interface HttpTemplateConfig extends ProviderBaseConfig {
-  type: "http-template";
-  method: "GET" | "POST";
-  url: string;
-  headers: Record<string, string>;
-  bodyTemplate: string;
-  responsePath: string;
-}
+export type LlmProviderConfig = OpenAICompatibleConfig | AnthropicCompatibleConfig;
 
 export type ProviderConfig =
-  | DoubaoWebConfig
-  | FirefoxLocalConfig
-  | MicrosoftWebTranslateConfig
   | GoogleWebTranslateConfig
-  | TencentTransmartConfig
-  | YandexWebTranslateConfig
-  | VolcengineWebTranslateConfig
-  | MyMemoryConfig
-  | MicrosoftTranslatorConfig
-  | GoogleCloudTranslationConfig
+  | FirefoxLocalConfig
   | OpenAICompatibleConfig
-  | AnthropicCompatibleConfig
-  | DeepSeekConfig
-  | ZhipuGlmConfig
-  | HttpTemplateConfig;
-
-export type DualServiceProviderConfig = Extract<ProviderConfig, DualServiceConfig & {
-  type: "microsoft-web-translate" | "google-web-translate" | "tencent-transmart"
-    | "yandex-web-translate" | "volcengine-web-translate" | "mymemory";
-}>;
+  | AnthropicCompatibleConfig;
 
 export interface ExtensionSettings {
   frameTranslation?: import("./frame-session").FrameTranslationSettings;
@@ -311,8 +183,6 @@ export type RuntimeRequest =
   | { type: "LOOKUP_DICTIONARY"; query: string; provider: DictionaryProvider }
   | { type: "PLAY_DICTIONARY_AUDIO"; provider: DictionaryProvider; url: string }
   | { type: "STOP_DICTIONARY_AUDIO" }
-  | { type: "GET_DOUBAO_STATUS" }
-  | { type: "CHECK_DOUBAO" }
   | { type: "GET_LOCAL_MODEL_STATUS" }
   | { type: "INSTALL_LOCAL_MODEL"; modelId: string }
   | { type: "CANCEL_LOCAL_MODEL_DOWNLOAD" }

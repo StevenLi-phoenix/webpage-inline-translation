@@ -255,7 +255,7 @@ describe("PDF source opening", () => {
       return { top, bottom: page ? top + 980 : 75, left: 0, right: 600, width: 600, height: page ? 980 : 75, x: 0, y: top, toJSON() {} };
     });
     Object.assign(chrome.runtime, { getURL: (path: string) => `chrome-extension://test-extension/${path}` });
-    const stored = { ...structuredClone(DEFAULT_SETTINGS), activeProviderId: "doubao-web" };
+    const stored = { ...structuredClone(DEFAULT_SETTINGS), activeProviderId: "openai-compatible" };
     const gates: Array<(response: RuntimeResponse) => void> = [];
     const original = sendMessage.getMockImplementation()!;
     sendMessage.mockImplementation((request: RuntimeRequest) => {
@@ -298,7 +298,6 @@ describe("PDF source opening", () => {
     await vi.waitFor(() => expect(button.disabled).toBe(false));
     expect(requests().filter((text) => text === "Page 2 contents.")).toHaveLength(1); // Retain the completed in-flight page.
     expect(document.querySelector("#statusToast")?.textContent).toContain("翻译完成");
-    expect(sendMessage.mock.calls.some(([request]) => request.type === "CHECK_DOUBAO")).toBe(false);
   });
 
   it("continues other waiting pages after an ordinary provider error", async () => {

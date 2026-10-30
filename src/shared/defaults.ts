@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   frameTranslation: { enabled: true, excludeMatches: [] },
   targetLang: "zh-CN",
   sourceLang: "auto",
-  activeProviderId: "microsoft-web-translate",
+  activeProviderId: "google-web-translate",
   chunkSize: 1200,
   concurrency: 3,
   pdfTranslationPageRadius: 5,
@@ -26,109 +26,38 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   translationDisplayMode: "bilingual",
   providers: [
     {
-      type: "microsoft-web-translate",
-      id: "microsoft-web-translate",
-      label: "Microsoft 翻译",
-      enabled: true
-    },
-    {
       type: "google-web-translate",
       id: "google-web-translate",
       label: "Google 翻译",
       enabled: true
     },
     {
-      type: "doubao-web",
-      id: "doubao-web",
-      label: "豆包（实验性）",
-      enabled: true,
-      performanceMode: "custom",
-      chunkSize: 1200,
-      concurrency: 1
-    },
-    {
-      type: "tencent-transmart",
-      id: "tencent-transmart",
-      label: "腾讯翻译",
-      enabled: true
-    },
-    {
-      type: "yandex-web-translate",
-      id: "yandex-web-translate",
-      label: "Yandex 翻译",
-      enabled: true
-    },
-    {
-      type: "volcengine-web-translate",
-      id: "volcengine-web-translate",
-      label: "火山翻译",
-      enabled: true
-    },
-    {
-      type: "mymemory",
-      id: "mymemory",
-      label: "MyMemory",
-      enabled: true,
-      performanceMode: "custom",
-      chunkSize: 400,
-      concurrency: 1
-    },
-    {
       type: "openai-compatible",
       id: "openai-compatible",
-      label: "OpenAI Compatible",
+      label: "OpenAI 兼容",
       enabled: true,
       performanceMode: "custom",
       chunkSize: 3200,
       concurrency: 3,
       baseURL: "https://api.openai.com/v1",
-      ollamaCompatibility: true,
       apiKey: "",
       model: "gpt-4o-mini",
       systemPrompt:
         "You are a translation engine. Translate each input item into {{targetLang}}. Preserve meaning, numbers, links, code-like tokens, placeholders like ⟪WUPAGE0⟫, and formatting. Return only a JSON array of strings in the same order."
     },
     {
-      type: "deepseek",
-      id: "deepseek",
-      label: "DeepSeek",
+      type: "anthropic-compatible",
+      id: "anthropic-compatible",
+      label: "Anthropic 兼容",
       enabled: true,
       performanceMode: "custom",
       chunkSize: 3200,
       concurrency: 3,
-      baseURL: "https://api.deepseek.com",
+      baseURL: "https://api.anthropic.com",
       apiKey: "",
-      model: "deepseek-flash",
+      model: "claude-haiku-5-5",
       systemPrompt:
         "You are a translation engine. Translate each input item into {{targetLang}}. Preserve meaning, numbers, links, code-like tokens, placeholders like ⟪WUPAGE0⟫, and formatting. Return only a JSON array of strings in the same order."
-    },
-    {
-      type: "zhipu-glm",
-      id: "zhipu-glm",
-      label: "Zhipu GLM",
-      enabled: true,
-      performanceMode: "custom",
-      chunkSize: 3200,
-      concurrency: 3,
-      baseURL: "https://open.bigmodel.cn/api/paas/v4",
-      apiKey: "",
-      model: "glm-4-flash-250414",
-      systemPrompt:
-        "You are a translation engine. Translate each input item into {{targetLang}}. Preserve meaning, numbers, links, code-like tokens, placeholders like ⟪WUPAGE0⟫, and formatting. Return only a JSON array of strings in the same order."
-    },
-    {
-      type: "http-template",
-      id: "http-template",
-      label: "HTTP Template",
-      enabled: true,
-      method: "POST",
-      url: "",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      bodyTemplate:
-        "{\"q\":{{json texts}},\"source\":\"{{sourceLang}}\",\"target\":\"{{targetLang}}\"}",
-      responsePath: "translations"
     },
     {
       type: "firefox-local",

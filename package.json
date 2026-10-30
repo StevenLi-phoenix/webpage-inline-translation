@@ -60,8 +60,6 @@
     "test:menu-layout": "node scripts/test-menu-layout.mjs",
     "test:menu-layout:edge": "node scripts/test-menu-layout.mjs --edge",
     "test:menu-layout:firefox": "node scripts/test-menu-layout.mjs --firefox",
-    "test:services": "node scripts/test-service-modes.mjs",
-    "test:templates": "node scripts/test-request-templates.mjs",
     "test:ocr": "node scripts/test-ocr-flow.mjs",
     "test:ocr-runtime": "node scripts/test-ocr-runtime.mjs",
     "test:local": "node scripts/test-local-translation.mjs",

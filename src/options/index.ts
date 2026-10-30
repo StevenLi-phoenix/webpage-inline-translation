@@ -3,24 +3,17 @@ import { normalizeFrameTranslation } from "../shared/frame-session";
 import { SOURCE_LANGUAGES, TARGET_LANGUAGES } from "../shared/languages";
 import { TRANSLATION_DISPLAY_MODES } from "../shared/display-modes";
 import { sendRuntimeMessage } from "../shared/messaging";
-import type { DoubaoStatus, ExtensionSettings, ProviderConfig, TranslationApiOptions } from "../shared/types";
-import { supportsServiceMode, translationApiOptions } from "../shared/translation-service";
+import type { ExtensionSettings, ProviderConfig } from "../shared/types";
 import "./styles.css";
 import { setImageTranslationToggle, setupOcrControl } from "../shared/ocr-control";
 import { setupLocalModelControl } from "../local/control";
-import { ensureProviderIconStyles, providerIconMarkup } from "../shared/provider-icons";
 import { setupAutoTranslationControls } from "./auto-translation";
-import { renderProviderUsage, updateProviderScheduling } from "./provider-usage";
 import { setupSettingsNavigation } from "./navigation";
 import { setupShortcutSettings } from "./shortcuts";
 import { setupAppearanceControls } from "./appearance";
 import "../shared/appearance.css";
 import { normalizeSelectionTranslation, type DictionaryProvider, type SelectionTriggerStyle } from "../shared/dictionary";
-import { RequestTemplateError, supportsRequestTemplate, validateRequestTemplate } from "../shared/request-template";
-import { readRequestTemplate, setupProviderTabs } from "./provider-advanced";
-import { isDoubaoBrowserSupported } from "../shared/doubao";
-import { formatDoubaoStatus, isDoubaoProviderUnavailable, syncDoubaoTargetControls } from "../shared/doubao-ui";
-import { renderUiIcons, uiIconMarkup } from "../shared/ui-icons";
+import { renderUiIcons } from "../shared/ui-icons";
 
 renderUiIcons();
 
@@ -44,23 +37,16 @@ const imageTranslationEnabled = query<HTMLInputElement>("#imageTranslationEnable
 const translateCodeComments = query<HTMLInputElement>("#translateCodeComments");
 const translationDisplayMode = query<HTMLSelectElement>("#translationDisplayMode");
 const translationDisplayModeDescription = query<HTMLSpanElement>("#translationDisplayModeDescription");
-const providerPicker = query<HTMLDivElement>("#providerPicker");
-const providerTrigger = query<HTMLButtonElement>("#providerTrigger");
-const providerTriggerLabel = query<HTMLSpanElement>("#providerTriggerLabel");
-const providerMenu = query<HTMLDivElement>("#providerMenu");
+const providerSelect = query<HTMLSelectElement>("#providerSelect");
+const providerEnabled = query<HTMLInputElement>("#providerEnabled");
+const deleteProviderButton = query<HTMLButtonElement>("#deleteProvider");
 const addProviderButton = query<HTMLButtonElement>("#addProvider");
 const providerForm = query<HTMLDivElement>("#providerForm");
 const providerPerformance = query<HTMLDivElement>("#providerPerformance");
-const modelDialog = query<HTMLDialogElement>("#modelDialog");
-const modelDialogForm = query<HTMLFormElement>("#modelDialogForm");
-const modelAction = query<HTMLSelectElement>("#modelAction");
-const customModelName = query<HTMLInputElement>("#customModelName");
 const providerDialog = query<HTMLDialogElement>("#providerDialog");
 const providerDialogForm = query<HTMLFormElement>("#providerDialogForm");
 const cancelProviderButton = query<HTMLButtonElement>("#cancelProvider");
 const customProviderName = query<HTMLInputElement>("#customProviderName");
-const customProviderKind = query<HTMLSelectElement>("#customProviderKind");
-const customLlmFormatField = query<HTMLLabelElement>("#customLlmFormatField");
 const customLlmFormat = query<HTMLSelectElement>("#customLlmFormat");
 const saveButton = query<HTMLButtonElement>("#save");
 const restoreButton = query<HTMLButtonElement>("#restore");
@@ -74,21 +60,10 @@ const autoTranslationControls = setupAutoTranslationControls(
 const frameTranslationEnabled = query<HTMLInputElement>("#frameTranslationEnabled");
 const frameTranslationExcluded = query<HTMLTextAreaElement>("#frameTranslationExcluded");
 
-const LLM_MODEL_OPTIONS = [
-  "gpt-4o-mini",
-  "glm-4-flash-250414",
-  "glm-4.7-flash",
-  "glm-4-flashx-250414"
-];
-const ZHIPU_MODEL_OPTIONS = [
-  "glm-4-flash-250414",
-  "glm-4.7-flash",
-  "glm-4-flashx-250414"
-];
-const DEEPSEEK_MODEL_OPTIONS = [
-  "deepseek-flash",
-  "deepseek-v4-pro"
-];
+const MODEL_SUGGESTIONS: Record<"openai-compatible" | "anthropic-compatible", string[]> = {
+  "openai-compatible": ["gpt-4o-mini"],
+  "anthropic-compatible": ["claude-haiku-5-5"]
+};
 const DEFAULT_LLM_PROMPT =
   "You are a translation engine. Translate each input item into {{targetLang}}. Preserve meaning, numbers, links, code-like tokens, placeholders like ⟪WUPAGE0⟫, and formatting. Return only a JSON array of strings in the same order.";
 
@@ -96,17 +71,6 @@ let settings: ExtensionSettings;
 let editingProviderId: string | undefined;
 let disposeLocalControl: (() => void) | undefined;
 let activeProviderTest: { providerId: string; status: HTMLElement; message: string } | undefined;
-let providerFormVersion = 0;
-let doubaoStatus: DoubaoStatus = { state: "unknown" };
-let doubaoCheck: Promise<void> | undefined;
-let doubaoStatusRevision = 0;
-let doubaoRetryTimer: ReturnType<typeof setTimeout> | undefined;
-let optionsClosed = false;
-
-window.addEventListener("pagehide", () => {
-  optionsClosed = true;
-  clearTimeout(doubaoRetryTimer);
-}, { once: true });
 
 void init().catch((error: unknown) => {
   setStatus(error instanceof Error ? error.message : String(error));
@@ -127,55 +91,25 @@ async function init(): Promise<void> {
     setStatus("无法连接网页。请刷新刚才的网页，再右键选择全文翻译。");
   }
 
-  providerTrigger.addEventListener("click", () => setProviderMenuOpen(providerMenu.hidden));
-  providerMenu.addEventListener("click", (event) => {
-    const button = event.target instanceof Element
-      ? event.target.closest<HTMLButtonElement>("button[data-action]")
-      : null;
-    if (!button) return;
-    void handleProviderAction(button.dataset.action ?? "", button.dataset.providerId ?? "");
+  providerSelect.addEventListener("change", () => {
+    void handleProviderAction("select", providerSelect.value);
+  });
+  providerEnabled.addEventListener("change", () => {
+    void handleProviderAction("toggle", getEditingProvider().id);
+  });
+  deleteProviderButton.addEventListener("click", () => {
+    void handleProviderAction("delete", getEditingProvider().id);
   });
   addProviderButton.addEventListener("click", openProviderDialog);
   cancelProviderButton.addEventListener("click", () => providerDialog.close());
-  customProviderKind.addEventListener("change", updateCustomProviderFields);
   providerDialogForm.addEventListener("submit", (event) => {
     event.preventDefault();
     void addCustomProvider();
-  });
-  query<HTMLButtonElement>("#cancelModel").addEventListener("click", () => modelDialog.close());
-  modelAction.addEventListener("change", () => {
-    const provider = getEditingProvider();
-    customModelName.value = modelAction.value === "edit" && "model" in provider ? provider.model : "";
-    customModelName.focus();
-  });
-  modelDialogForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    void saveModel();
-  });
-  document.addEventListener("click", (event) => {
-    if (event.target instanceof Node && !providerPicker.contains(event.target)) {
-      setProviderMenuOpen(false);
-    }
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") setProviderMenuOpen(false);
   });
   saveButton.addEventListener("click", () => { void save().catch(() => {}); });
   restoreButton.addEventListener("click", restoreDefaults);
   providerForm.addEventListener("input", invalidateProviderTest);
   providerForm.addEventListener("change", invalidateProviderTest);
-  const updateUsageOnEdit = (event: Event): void => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (["serviceMode", "model", "baseURL", "endpoint"].includes(target.dataset.field ?? "")
-      || ["model", "endpoint"].includes(target.dataset.apiField ?? "")) updateProviderUsage();
-  };
-  providerForm.addEventListener("input", updateUsageOnEdit);
-  providerForm.addEventListener("change", updateUsageOnEdit);
-  for (const field of [chunkSize, concurrency, providerPerformance]) {
-    field.addEventListener("input", updateUsageScheduling);
-    field.addEventListener("change", updateUsageScheduling);
-  }
   pdfTranslationScope.addEventListener("change", updatePdfTranslationScope);
   sourceLang.addEventListener("change", updateLocalControl);
   targetLang.addEventListener("change", updateLocalControl);
@@ -208,7 +142,7 @@ function render(): void {
     .join("");
   translationDisplayMode.value = settings.translationDisplayMode;
   updateTranslationDisplayModeDescription();
-  renderProviderPicker(false);
+  renderProviderSelect();
   renderProviderForm();
 }
 
@@ -240,282 +174,52 @@ function renderLanguageOptions(
   select.value = value;
 }
 
-function renderProviderPicker(keepOpen: boolean): void {
-  ensureProviderIconStyles();
+function renderProviderSelect(): void {
   const activeProvider = getEditingProvider();
-  query<HTMLElement>("#providerTriggerIcon").innerHTML = providerIconMarkup(activeProvider);
-  providerTriggerLabel.textContent = activeProvider.label;
+  providerSelect.replaceChildren(...settings.providers.map((provider) =>
+    new Option(provider.enabled === false ? `${provider.label}（已停用）` : provider.label, provider.id)));
+  providerSelect.value = activeProvider.id;
+  providerEnabled.checked = activeProvider.enabled !== false;
+  deleteProviderButton.hidden = BUILT_IN_PROVIDER_IDS.has(activeProvider.id);
   query<HTMLElement>("#disabledProviderHint").hidden = activeProvider.enabled !== false;
-  providerMenu.innerHTML = settings.providers.map(renderProviderMenuRow).join("");
-  setProviderMenuOpen(keepOpen);
-}
-
-function renderProviderMenuRow(provider: ProviderConfig): string {
-  const enabled = provider.enabled !== false;
-  const unavailable = isDoubaoProviderUnavailable(provider);
-  const builtIn = BUILT_IN_PROVIDER_IDS.has(provider.id);
-  return `
-    <div class="provider-menu-row" data-built-in="${builtIn}" role="group">
-      <button
-        class="provider-option"
-        type="button"
-        role="option"
-        data-action="select"
-        data-provider-id="${escapeAttr(provider.id)}"
-        aria-selected="${provider.id === editingProviderId}"
-        data-enabled="${enabled}"
-        ${unavailable ? "disabled" : ""}
-        title="${unavailable ? "此浏览器暂不支持豆包翻译" : `${escapeAttr(provider.label)}${enabled ? "" : "（已停用，可编辑）"}`}"
-      >
-        ${providerIconMarkup(provider)}
-        <span class="provider-option-label">${escapeHtml(provider.label)}</span>
-      </button>
-      <button
-        class="provider-enable"
-        type="button"
-        data-action="toggle"
-        data-provider-id="${escapeAttr(provider.id)}"
-        aria-pressed="${enabled}"
-        title="${enabled ? "停用" : "启用"} ${escapeAttr(provider.label)}"
-        aria-label="${enabled ? "停用" : "启用"} ${escapeAttr(provider.label)}"
-      ></button>
-      ${builtIn ? "" : `
-        <button
-          class="provider-delete"
-          type="button"
-          data-action="delete"
-          data-provider-id="${escapeAttr(provider.id)}"
-          title="删除 ${escapeAttr(provider.label)}"
-          aria-label="删除 ${escapeAttr(provider.label)}"
-        >${uiIconMarkup("trash")}</button>
-      `}
-    </div>
-  `;
 }
 
 function renderProviderForm(): void {
   invalidateProviderTest();
-  const version = ++providerFormVersion;
-  clearTimeout(doubaoRetryTimer);
   disposeLocalControl?.(); disposeLocalControl = undefined;
   const provider = getEditingProvider();
   providerPerformance.innerHTML = provider.type === "firefox-local"
     ? '<p class="hint">本地翻译使用固定分块大小 800、并发数 1。</p>'
-    : provider.type === "doubao-web"
-      ? '<p class="hint">豆包翻译使用固定分块大小 1200、并发数 1。</p>'
-      : renderProviderPerformance(provider);
+    : renderProviderPerformance(provider);
   providerPerformance.querySelector("[data-field='inheritPerformance']")
     ?.addEventListener("change", updateProviderPerformanceFields);
   updateProviderPerformanceFields();
-  syncDoubaoTargetControls(settings, targetLang);
-  if (provider.type === "doubao-web") {
-    setProviderFormMarkup(provider, `
-      <div class="grid"><label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label></div>
-      <div class="doubao-setup">
-        <h3>豆包（实验性）</h3>
-        <p>无需 API Key。在当前浏览器打开豆包并登录，即可开始翻译。连接异常时可点击“重新检测”。</p>
-        <p>翻译会将待译文本发送到豆包；检测只发送固定短文本。</p>
-        <div class="doubao-actions">
-          <button type="button" data-action="open-doubao">打开豆包并登录</button>
-          <button id="test" type="button" data-action="check-doubao">重新检测</button>
-        </div>
-        <p data-role="doubao-status" role="status" aria-live="polite"></p>
-        <p class="hint">如提示登录失效，请重新登录后重试翻译，或点击重新检测；如遇限流，请等待。登录状态由浏览器管理，无需复制 Cookie。</p>
-      </div>`);
-    providerForm.querySelector<HTMLButtonElement>("[data-action='open-doubao']")?.addEventListener("click", () => {
-      void chrome.tabs.create({ url: "https://www.doubao.com/" }).catch((error: unknown) => setStatus(error instanceof Error ? error.message : String(error)));
-    });
-    if (!isDoubaoBrowserSupported()) doubaoStatus = { state: "unsupported-browser" };
-    renderDoubaoStatus();
-    if (isDoubaoBrowserSupported() && !doubaoCheck) {
-      const revision = doubaoStatusRevision;
-      void sendRuntimeMessage<DoubaoStatus>({ type: "GET_DOUBAO_STATUS" }).then((result) => {
-        if (version !== providerFormVersion || revision !== doubaoStatusRevision || !result) return;
-        doubaoStatus = result;
-        renderDoubaoStatus();
-      }).catch(() => { /* Keep the actionable initial state if the background is restarting. */ });
-    }
-    return;
-  }
   if (provider.type === "firefox-local") {
     setProviderFormMarkup(provider, `<div class="grid"><label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label></div><div data-local-model-control></div>`);
     updateLocalControl();
     return;
   }
-  if (supportsServiceMode(provider)) {
-    const api = translationApiOptions(provider);
-    const fields = provider.type === "microsoft-web-translate"
-      ? [["endpoint", "Endpoint", "url"], ["apiKey", "API Key", "password"], ["region", "Azure 区域（可选）", "text"]]
-      : provider.type === "tencent-transmart"
-        ? [["endpoint", "Base URL", "url"], ["apiKey", "TokenHub API Key", "password"], ["model", "翻译模型", "text"]]
-        : provider.type === "yandex-web-translate"
-          ? [["apiKey", "Yandex Cloud API Key", "password"], ["folderId", "Folder ID（按账号要求填写）", "text"]]
-          : provider.type === "volcengine-web-translate"
-            ? [["accessKeyId", "Access Key ID", "password"], ["secretAccessKey", "Secret Access Key", "password"], ["region", "区域", "text"]]
-            : [["apiKey", provider.type === "mymemory" ? "RapidAPI Key" : "Google Cloud API Key", "password"]];
-    const apiLabel = { "microsoft-web-translate": "Microsoft Translator API（Azure）", "google-web-translate": "Google Cloud Translation API",
-      "tencent-transmart": "腾讯 TokenHub 翻译 API", "yandex-web-translate": "Yandex Cloud Translate API",
-      "volcengine-web-translate": "火山引擎机器翻译 API", "mymemory": "MyMemory（RapidAPI）" }[provider.type];
+  if (provider.type === "google-web-translate") {
     setProviderFormMarkup(provider, `
       <div class="grid">
         <label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label>
-        <label>使用方式 <select data-field="serviceMode" aria-controls="translationApiFields">
-          <option value="free" ${provider.serviceMode !== "api" ? "selected" : ""}>免费服务（默认）</option>
-          <option value="api" ${provider.serviceMode === "api" ? "selected" : ""}>API 服务（自备凭据）</option>
-        </select></label>
       </div>
-      <div id="translationApiFields" ${provider.serviceMode !== "api" ? "hidden" : ""}>
-        <p class="hint">${apiLabel}，额度和费用按服务商账号计算。切回免费服务会保留凭据。</p>
-        <div class="grid">${fields.map(([name, label, type]) => `<label>${label}<input data-api-field="${name}" type="${type}" value="${escapeAttr(api[name as keyof TranslationApiOptions] ?? "")}" autocomplete="off" /></label>`).join("")}</div>
-      </div>
-    `);
-    providerForm.querySelector<HTMLSelectElement>("[data-field='serviceMode']")!.addEventListener("change", event => {
-      const useApi = (event.target as HTMLSelectElement).value === "api";
-      providerForm.querySelector<HTMLElement>("#translationApiFields")!.hidden = !useApi;
-    });
-    return;
-  }
-
-  if (provider.type === "microsoft-translator") {
-    setProviderFormMarkup(provider, `
-      <div class="grid">
-        <label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label>
-        <label>Endpoint <input data-field="endpoint" type="url" value="${escapeAttr(provider.endpoint)}" /></label>
-        <label>API key <input data-field="apiKey" type="password" value="${escapeAttr(provider.apiKey)}" /></label>
-        <label>区域 <input data-field="region" type="text" value="${escapeAttr(provider.region)}" placeholder="global 或 Azure 区域" /></label>
-      </div>
+      <p class="hint">使用 Google 翻译网页接口，无需 API Key。待译文本会发送到 Google。</p>
     `);
     return;
   }
 
-  if (provider.type === "google-cloud-translation") {
-    setProviderFormMarkup(provider, `
-      <div class="grid">
-        <label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label>
-        <label>API key <input data-field="apiKey" type="password" value="${escapeAttr(provider.apiKey)}" /></label>
-      </div>
-    `);
-    return;
-  }
-
-  if (provider.type === "openai-compatible" || provider.type === "anthropic-compatible") {
-    const isAnthropic = provider.type === "anthropic-compatible";
-    setProviderFormMarkup(provider, `
-      <div class="grid">
-        <label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label>
-        <label>Base URL <input data-field="baseURL" type="url" value="${escapeAttr(provider.baseURL)}" /></label>
-        <label>API key（可选） <input data-field="apiKey" type="password" value="${escapeAttr(provider.apiKey)}" /></label>
-        ${renderModelControl(provider)}
-      </div>
-      <label>系统提示词 <textarea data-field="systemPrompt">${escapeHtml(provider.systemPrompt)}</textarea></label>
-      ${isAnthropic ? "" : `
-        <label>Ollama 兼容
-          <select data-field="ollamaCompatibility">
-            <option value="enabled" ${provider.type === "openai-compatible" && provider.ollamaCompatibility !== false ? "selected" : ""}>开启（默认）</option>
-            <option value="disabled" ${provider.type === "openai-compatible" && provider.ollamaCompatibility === false ? "selected" : ""}>关闭</option>
-          </select>
-        </label>
-        <p class="hint">默认开启，支持 IPv4、IPv6、自定义端口和完整 Chat Completions 地址。</p>
-      `}
-      <p class="hint">接口格式：${isAnthropic ? "Anthropic Messages" : "OpenAI Chat Completions"}。</p>
-    `);
-    return;
-  }
-
-  if (provider.type === "deepseek") {
-    setProviderFormMarkup(provider, `
-      <div class="grid">
-        <label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label>
-        <label>Base URL <input data-field="baseURL" type="url" value="${escapeAttr(provider.baseURL)}" /></label>
-        <label>API key <input data-field="apiKey" type="password" value="${escapeAttr(provider.apiKey)}" /></label>
-        ${renderModelControl(provider)}
-      </div>
-      <label>系统提示词 <textarea data-field="systemPrompt">${escapeHtml(provider.systemPrompt)}</textarea></label>
-      <p class="hint">使用 DeepSeek Chat Completions，默认关闭思考模式以降低翻译延迟，可在「高级」中覆盖。API 地址默认使用 https://api.deepseek.com。</p>
-    `);
-    return;
-  }
-
-  if (provider.type === "zhipu-glm") {
-    setProviderFormMarkup(provider, `
-      <div class="grid">
-        <label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label>
-        <label>Base URL <input data-field="baseURL" type="url" value="${escapeAttr(provider.baseURL)}" /></label>
-        <label>API key <input data-field="apiKey" type="password" value="${escapeAttr(provider.apiKey)}" /></label>
-        ${renderModelControl(provider)}
-      </div>
-      <label>系统提示词 <textarea data-field="systemPrompt">${escapeHtml(provider.systemPrompt)}</textarea></label>
-      <p class="hint">使用智谱 GLM Chat Completions。API 地址默认使用 https://open.bigmodel.cn/api/paas/v4。</p>
-    `);
-    return;
-  }
-
+  const isAnthropic = provider.type === "anthropic-compatible";
   setProviderFormMarkup(provider, `
     <div class="grid">
       <label>显示名称 <input data-field="label" type="text" value="${escapeAttr(provider.label)}" /></label>
-      <label>请求方法
-        <select data-field="method">
-          <option value="POST" ${provider.method === "POST" ? "selected" : ""}>POST</option>
-          <option value="GET" ${provider.method === "GET" ? "selected" : ""}>GET</option>
-        </select>
-      </label>
-      <label>URL <input data-field="url" type="url" value="${escapeAttr(provider.url)}" /></label>
-      <label>响应路径 <input data-field="responsePath" type="text" value="${escapeAttr(provider.responsePath)}" /></label>
+      <label>Base URL <input data-field="baseURL" type="url" value="${escapeAttr(provider.baseURL)}" /></label>
+      <label>API key（可选） <input data-field="apiKey" type="password" value="${escapeAttr(provider.apiKey)}" autocomplete="off" /></label>
+      ${renderModelControl(provider)}
     </div>
-    <label>请求头 JSON <textarea data-field="headers">${escapeHtml(JSON.stringify(provider.headers, null, 2))}</textarea></label>
-    <label>请求体模板 <textarea data-field="bodyTemplate">${escapeHtml(provider.bodyTemplate)}</textarea></label>
+    <label>系统提示词 <textarea data-field="systemPrompt">${escapeHtml(provider.systemPrompt)}</textarea></label>
+    <p class="hint">接口格式：${isAnthropic ? "Anthropic Messages" : "OpenAI Chat Completions"}。</p>
   `);
-}
-
-function renderDoubaoStatus(): void {
-  if (optionsClosed || getEditingProvider().type !== "doubao-web") return;
-  const statusElement = providerForm.querySelector<HTMLElement>("[data-role='doubao-status']");
-  const checkButton = providerForm.querySelector<HTMLButtonElement>("[data-action='check-doubao']");
-  const retryIn = Math.max(0, (doubaoStatus.retryAt ?? 0) - Date.now());
-  if (statusElement) {
-    statusElement.textContent = formatDoubaoStatus(doubaoStatus);
-    statusElement.dataset.state = doubaoStatus.state;
-  }
-  const disabled = Boolean(doubaoCheck) || doubaoStatus.state === "checking" || !isDoubaoBrowserSupported() || retryIn > 0;
-  if (checkButton) checkButton.disabled = disabled;
-  clearTimeout(doubaoRetryTimer);
-  if (retryIn > 0) doubaoRetryTimer = setTimeout(renderDoubaoStatus, Math.min(retryIn + 10, 1000));
-  else if (doubaoStatus.state === "checking" && !doubaoCheck) {
-    const version = providerFormVersion;
-    const revision = doubaoStatusRevision;
-    doubaoRetryTimer = setTimeout(() => {
-      void sendRuntimeMessage<DoubaoStatus>({ type: "GET_DOUBAO_STATUS" }).then((result) => {
-        if (version !== providerFormVersion || revision !== doubaoStatusRevision || !result) return;
-        doubaoStatus = result;
-        renderDoubaoStatus();
-      }).catch(() => {
-        if (version !== providerFormVersion || revision !== doubaoStatusRevision) return;
-        doubaoStatus = { state: "network-error" };
-        renderDoubaoStatus();
-      });
-    }, 1000);
-  }
-}
-
-function checkDoubao(): Promise<void> {
-  if (doubaoCheck) return doubaoCheck;
-  if (!isDoubaoBrowserSupported()) {
-    doubaoStatus = { state: "unsupported-browser" };
-    renderDoubaoStatus();
-    return Promise.resolve();
-  }
-  if ((doubaoStatus.retryAt ?? 0) > Date.now()) return Promise.resolve();
-  doubaoStatusRevision += 1;
-  doubaoStatus = { state: "checking" };
-  doubaoCheck = sendRuntimeMessage<DoubaoStatus>({ type: "CHECK_DOUBAO" })
-    .then((result) => { doubaoStatus = result; })
-    .catch(() => { doubaoStatus = { state: "network-error", checkedAt: Date.now() }; })
-    .finally(() => {
-      doubaoCheck = undefined;
-      renderDoubaoStatus();
-    });
-  renderDoubaoStatus();
-  return doubaoCheck;
 }
 
 function updateLocalControl(): void {
@@ -528,96 +232,23 @@ function updateLocalControl(): void {
 function setProviderFormMarkup(provider: ProviderConfig, markup: string): void {
   providerForm.dataset.providerId = provider.id;
   providerForm.innerHTML = markup;
-  setupProviderTabs(providerForm, provider);
-  if (!providerForm.querySelector("#test")) {
-    providerForm.insertAdjacentHTML("beforeend", `<div class="provider-test-action">${renderTestButton()}</div>`);
-  }
+  providerForm.insertAdjacentHTML("beforeend", `<div class="provider-test-action">${renderTestButton()}</div>`);
   providerForm.insertAdjacentHTML("beforeend", '<p data-role="provider-test-status" class="hint" role="status" hidden></p>');
-  const usage = document.createElement("aside"); usage.id = "providerUsage";
-  providerForm.append(usage);
-  renderProviderUsage(usage, provider);
-  updateUsageScheduling();
   providerForm.querySelector("#test")?.addEventListener("click", testProvider);
-  providerForm.querySelector("[data-action='test-provider']")?.addEventListener("click", testProvider);
-  providerForm.querySelector("[data-action='manage-model']")?.addEventListener("click", () => {
-    settings = readSettingsFromForm();
-    modelAction.value = "add";
-    customModelName.value = "";
-    query<HTMLElement>("#modelStatus").textContent = "";
-    modelDialog.showModal();
-    customModelName.focus();
-  });
-}
-
-function updateProviderUsage(): void {
-  const container = providerForm.querySelector<HTMLElement>("#providerUsage");
-  if (!container) return;
-  renderProviderUsage(container, readProviderFromForm(getEditingProvider()));
-  updateUsageScheduling();
-}
-
-function updateUsageScheduling(): void {
-  const container = providerForm.querySelector<HTMLElement>("#providerUsage");
-  if (!container) return;
-  const provider = { ...readProviderFromForm(getEditingProvider()), ...readProviderPerformance() } as ProviderConfig;
-  const value = (input: HTMLInputElement, fallback: number, min: number, max: number): number => {
-    const number = Number(input.value);
-    return input.value && Number.isFinite(number) ? Math.min(max, Math.max(min, Math.round(number))) : fallback;
-  };
-  updateProviderScheduling(container, provider, { ...settings,
-    chunkSize: value(chunkSize, settings.chunkSize, 200, 4000), concurrency: value(concurrency, settings.concurrency, 1, 8),
-    providers: settings.providers.map(entry => entry.id === provider.id ? provider : entry) });
 }
 
 type ModelProvider = Extract<ProviderConfig, { model: string }>;
-
-function modelPresets(provider: ModelProvider): string[] {
-  if (provider.type === "deepseek") return DEEPSEEK_MODEL_OPTIONS;
-  if (provider.type === "zhipu-glm") return ZHIPU_MODEL_OPTIONS;
-  return provider.type === "openai-compatible" ? LLM_MODEL_OPTIONS : [];
-}
 
 function renderTestButton(): string {
   return '<button id="test" type="button" class="secondary">测试服务</button>';
 }
 
 function renderModelControl(provider: ModelProvider): string {
-  const models = [...new Set([...modelPresets(provider), ...(provider.customModels ?? [])])];
-  return `<div class="model-field">
-    <label for="providerModel">模型</label>
-    <div class="model-toolbar">
-      <select id="providerModel" data-field="model">${renderOptions(models, provider.model)}</select>
-      <button type="button" class="icon-button add-model" data-action="manage-model" title="添加或修改模型" aria-label="添加或修改模型">${uiIconMarkup("plus")}</button>
-      ${renderTestButton()}
-    </div>
-  </div>`;
-}
-
-async function saveModel(): Promise<void> {
-  try {
-    const provider = getEditingProvider();
-    if (!("model" in provider)) return;
-    const model = customModelName.value.trim();
-    if (!model) {
-      query<HTMLElement>("#modelStatus").textContent = "请填写模型名称。";
-      return;
-    }
-    const presets = modelPresets(provider);
-    const previous = [...new Set([...(provider.customModels ?? []),
-      ...(!presets.includes(provider.model) ? [provider.model] : [])])];
-    const customModels = [...new Set([
-      ...previous.filter((name) => modelAction.value !== "edit" || name !== provider.model),
-      ...(!presets.includes(model) ? [model] : [])
-    ])];
-    settings.providers = settings.providers.map((entry) => entry.id === provider.id
-      ? { ...provider, model, customModels } : entry);
-    await persistSettings(false);
-    modelDialog.close();
-    render();
-    setStatus(`已保存模型：${model}`);
-  } catch (error) {
-    query<HTMLElement>("#modelStatus").textContent = error instanceof Error ? error.message : String(error);
-  }
+  const suggestions = MODEL_SUGGESTIONS[provider.type];
+  return `<label>模型
+    <input id="providerModel" data-field="model" type="text" list="providerModelList" value="${escapeAttr(provider.model)}" autocomplete="off" spellcheck="false" />
+    <datalist id="providerModelList">${suggestions.map((model) => `<option value="${escapeAttr(model)}"></option>`).join("")}</datalist>
+  </label>`;
 }
 
 function renderProviderPerformance(provider: ProviderConfig): string {
@@ -665,13 +296,13 @@ async function handleProviderAction(action: string, providerId: string): Promise
 
 async function selectProvider(providerId: string): Promise<void> {
   const provider = settings.providers.find((entry) => entry.id === providerId);
-  if (!provider || isDoubaoProviderUnavailable(provider)) return;
+  if (!provider) return;
   invalidateProviderTest();
   settings = readSettingsFromForm();
   if (provider.enabled !== false) settings.activeProviderId = providerId;
   await persistSettings(false);
   editingProviderId = providerId;
-  renderProviderPicker(false);
+  renderProviderSelect();
   renderProviderForm();
   setStatus(provider.enabled === false ? "已选中停用服务，可编辑配置。" : "已切换当前服务。");
 }
@@ -686,6 +317,7 @@ async function toggleProvider(providerId: string): Promise<void> {
       (entry) => entry.id !== providerId && entry.enabled !== false
     );
     if (!hasOtherEnabled) {
+      providerEnabled.checked = true;
       setStatus("至少需要启用一个翻译服务。");
       return;
     }
@@ -697,7 +329,7 @@ async function toggleProvider(providerId: string): Promise<void> {
     settings.activeProviderId = settings.providers.find((entry) => entry.enabled !== false)!.id;
   }
   await persistSettings(false);
-  renderProviderPicker(true);
+  renderProviderSelect();
   renderProviderForm();
   setStatus(nextEnabled ? "已启用服务。" : "已停用服务。");
 }
@@ -714,33 +346,22 @@ async function deleteProvider(providerId: string): Promise<void> {
   }
   if (editingProviderId === providerId) editingProviderId = settings.activeProviderId;
   await persistSettings(false);
-  renderProviderPicker(true);
+  renderProviderSelect();
   renderProviderForm();
   setStatus("已删除自定义服务。");
 }
 
 function openProviderDialog(): void {
-  setProviderMenuOpen(false);
   customProviderName.value = "";
-  customProviderKind.value = "http";
   customLlmFormat.value = "openai";
-  updateCustomProviderFields();
   providerDialog.showModal();
   window.setTimeout(() => customProviderName.focus(), 0);
-}
-
-function updateCustomProviderFields(): void {
-  customLlmFormatField.hidden = customProviderKind.value !== "llm";
 }
 
 async function addCustomProvider(): Promise<void> {
   try {
     settings = readSettingsFromForm();
-    const provider = createCustomProvider(
-      customProviderName.value.trim(),
-      customProviderKind.value,
-      customLlmFormat.value
-    );
+    const provider = createCustomProvider(customProviderName.value.trim(), customLlmFormat.value);
     settings.providers = [...settings.providers, provider];
     settings.activeProviderId = provider.id;
     await persistSettings(false);
@@ -753,47 +374,32 @@ async function addCustomProvider(): Promise<void> {
   }
 }
 
-function createCustomProvider(name: string, kind: string, llmFormat: string): ProviderConfig {
-  const id = createCustomProviderId(kind === "llm" ? llmFormat : kind);
-  if (kind === "http") {
-    return {
-      type: "http-template",
-      id,
-      label: name || "自定义 HTTP",
-      enabled: true,
-      performanceMode: "inherit",
-      method: "POST",
-      url: "",
-      headers: { "Content-Type": "application/json" },
-      bodyTemplate: "{\"q\":{{json texts}},\"source\":\"{{sourceLang}}\",\"target\":\"{{targetLang}}\"}",
-      responsePath: "translations"
-    };
-  }
+function createCustomProvider(name: string, llmFormat: string): ProviderConfig {
+  const id = createCustomProviderId(llmFormat === "anthropic" ? "anthropic" : "openai");
   if (llmFormat === "anthropic") {
     return {
       type: "anthropic-compatible",
       id,
-      label: name || "自定义 Anthropic LLM",
+      label: name || "自定义 Anthropic 兼容",
       enabled: true,
       performanceMode: "custom",
       chunkSize: 3200,
       concurrency: settings.concurrency,
-      baseURL: "https://api.anthropic.com/v1",
+      baseURL: "https://api.anthropic.com",
       apiKey: "",
-      model: "claude-3-5-haiku-latest",
+      model: "claude-haiku-5-5",
       systemPrompt: DEFAULT_LLM_PROMPT
     };
   }
   return {
     type: "openai-compatible",
     id,
-    label: name || "自定义 OpenAI LLM",
+    label: name || "自定义 OpenAI 兼容",
     enabled: true,
     performanceMode: "custom",
     chunkSize: 3200,
     concurrency: settings.concurrency,
     baseURL: "https://api.openai.com/v1",
-    ollamaCompatibility: true,
     apiKey: "",
     model: "gpt-4o-mini",
     systemPrompt: DEFAULT_LLM_PROMPT
@@ -832,10 +438,6 @@ function invalidateProviderTest(): void {
 }
 
 async function testProvider(): Promise<void> {
-  if (getEditingProvider().type === "doubao-web") {
-    await checkDoubao();
-    return;
-  }
   invalidateProviderTest();
   const inlineStatus = providerForm.querySelector<HTMLElement>("[data-role='provider-test-status']");
   if (!inlineStatus) return;
@@ -885,31 +487,12 @@ function readSettingsFromForm(): ExtensionSettings {
     query<HTMLElement>("#appearanceSettings [aria-invalid='true']").focus();
     throw error;
   }
+  const editing = getEditingProvider();
   const activeProvider = {
-    ...readProviderFromForm(getEditingProvider()),
-    ...(getEditingProvider().type === "firefox-local" ? { performanceMode: "custom", chunkSize: 800, concurrency: 1 }
-      : getEditingProvider().type === "doubao-web" ? { performanceMode: "custom", chunkSize: 1200, concurrency: 1 }
-        : readProviderPerformance())
+    ...readProviderFromForm(editing),
+    ...(editing.type === "firefox-local" ? { performanceMode: "custom", chunkSize: 800, concurrency: 1 }
+      : readProviderPerformance())
   } as ProviderConfig;
-  if (supportsRequestTemplate(activeProvider)) {
-    try {
-      validateRequestTemplate(activeProvider.requestTemplate);
-    } catch (error) {
-      if (error instanceof RequestTemplateError) {
-        providerForm.querySelector<HTMLButtonElement>("#providerAdvancedTab")!.click();
-        const field = providerForm.querySelector<HTMLTextAreaElement>(
-          `[data-field='${error.field === "headers" ? "requestHeadersTemplate" : "requestBodyTemplate"}']`
-        )!;
-        settingsNavigation.reveal(field);
-        field.setAttribute("aria-invalid", "true");
-        const message = providerForm.querySelector<HTMLElement>("[data-role='request-template-status']")!;
-        message.textContent = error.message;
-        message.hidden = false;
-        field.focus();
-      }
-      throw error;
-    }
-  }
   return {
     ...settings,
     appearance,
@@ -968,44 +551,6 @@ function readProviderFromForm(provider: ProviderConfig): ProviderConfig {
       `[data-field="${name}"]`
     )?.value ?? "";
 
-  if ("model" in provider) {
-    // Retain models from older settings before replacing the current selection.
-    const previousModel = provider.model.trim();
-    if (previousModel && !modelPresets(provider).includes(previousModel)) {
-      provider = { ...provider, customModels: [...new Set([...(provider.customModels ?? []), previousModel])] };
-    }
-  }
-  if (supportsRequestTemplate(provider)) {
-    provider = { ...provider, requestTemplate: readRequestTemplate(providerForm) };
-  }
-
-  if (supportsServiceMode(provider)) {
-    const api = { ...provider.api };
-    providerForm.querySelectorAll<HTMLInputElement>("[data-api-field]").forEach(input => {
-      api[input.dataset.apiField as keyof TranslationApiOptions] = input.value.trim();
-    });
-    return { ...provider, label: field("label").trim() || provider.label,
-      serviceMode: field("serviceMode") === "api" ? "api" : "free", api };
-  }
-  if (provider.type === "firefox-local" || provider.type === "doubao-web") {
-    return { ...provider, label: field("label").trim() || provider.label };
-  }
-  if (provider.type === "microsoft-translator") {
-    return {
-      ...provider,
-      label: field("label").trim() || provider.label,
-      endpoint: field("endpoint").trim() || "https://api.cognitive.microsofttranslator.com",
-      apiKey: field("apiKey"),
-      region: field("region").trim()
-    };
-  }
-  if (provider.type === "google-cloud-translation") {
-    return {
-      ...provider,
-      label: field("label").trim() || provider.label,
-      apiKey: field("apiKey")
-    };
-  }
   if (provider.type === "openai-compatible" || provider.type === "anthropic-compatible") {
     return {
       ...provider,
@@ -1013,52 +558,10 @@ function readProviderFromForm(provider: ProviderConfig): ProviderConfig {
       baseURL: field("baseURL").trim(),
       apiKey: field("apiKey"),
       model: field("model").trim(),
-      systemPrompt: field("systemPrompt"),
-      ...(provider.type === "openai-compatible" ? {
-        ollamaCompatibility: field("ollamaCompatibility") === "enabled"
-      } : {})
-    };
-  }
-  if (provider.type === "deepseek") {
-    return {
-      ...provider,
-      label: field("label").trim() || provider.label,
-      baseURL: field("baseURL").trim() || "https://api.deepseek.com",
-      apiKey: field("apiKey"),
-      model: field("model").trim() || "deepseek-flash",
       systemPrompt: field("systemPrompt")
     };
   }
-  if (provider.type === "zhipu-glm") {
-    return {
-      ...provider,
-      label: field("label").trim() || provider.label,
-      baseURL: field("baseURL").trim() || "https://open.bigmodel.cn/api/paas/v4",
-      apiKey: field("apiKey"),
-      model: field("model").trim() || "glm-4-flash-250414",
-      systemPrompt: field("systemPrompt")
-    };
-  }
-  return {
-    ...provider,
-    label: field("label").trim() || provider.label,
-    method: field("method") === "GET" ? "GET" : "POST",
-    url: field("url").trim(),
-    responsePath: field("responsePath").trim(),
-    headers: parseHeaders(field("headers")),
-    bodyTemplate: field("bodyTemplate")
-  };
-}
-
-function parseHeaders(value: string): Record<string, string> {
-  const parsed = JSON.parse(value || "{}") as unknown;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("请求头必须是 JSON 对象。");
-  }
-  if (!Object.values(parsed).every((entry) => typeof entry === "string")) {
-    throw new Error("请求头的值必须是字符串。");
-  }
-  return parsed as Record<string, string>;
+  return { ...provider, label: field("label").trim() || provider.label };
 }
 
 function getEditingProvider(): ProviderConfig {
@@ -1067,11 +570,6 @@ function getEditingProvider(): ProviderConfig {
   if (!provider) throw new Error("找不到当前翻译服务。");
   editingProviderId = provider.id;
   return provider;
-}
-
-function setProviderMenuOpen(open: boolean): void {
-  providerMenu.hidden = !open;
-  providerTrigger.setAttribute("aria-expanded", String(open));
 }
 
 function setStatus(value: string): void {
@@ -1099,15 +597,6 @@ function escapeHtml(value: string): string {
 
 function escapeAttr(value: string): string {
   return escapeHtml(value);
-}
-
-function renderOptions(values: string[], selected: string): string {
-  const options = values.includes(selected) ? values : [selected, ...values];
-  return options
-    .map((value) =>
-      `<option value="${escapeAttr(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(value)}</option>`
-    )
-    .join("");
 }
 
 function cloneSettings(value: ExtensionSettings): ExtensionSettings {

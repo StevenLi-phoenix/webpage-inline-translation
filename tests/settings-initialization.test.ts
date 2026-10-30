@@ -62,7 +62,7 @@ describe.each(["popup", "options"] as const)("%s image translation initializatio
       removeListener: (listener: (changes: Record<string, chrome.storage.StorageChange>, area: string) => void) => { listeners.delete(listener); }
     } } });
     await loadPage();
-    const incoming = { ...structuredClone(DEFAULT_SETTINGS), sourceLang: "ja", targetLang: "en", activeProviderId: "deepseek",
+    const incoming = { ...structuredClone(DEFAULT_SETTINGS), sourceLang: "ja", targetLang: "en", activeProviderId: "anthropic-compatible",
       autoTranslation: { enabled: true, nonTargetLanguage: true, presetSites: [], customSites: [] } };
     for (const listener of listeners) listener({ [SETTINGS_KEY]: { newValue: incoming } }, "local");
     finishSettings({ ok: true, data: structuredClone(DEFAULT_SETTINGS) });
@@ -71,7 +71,7 @@ describe.each(["popup", "options"] as const)("%s image translation initializatio
     expect(document.querySelector<HTMLButtonElement>("#addAutoTranslationSite")!.hidden).toBe(false);
     expect(document.querySelector<HTMLSelectElement>("#sourceLang")!.value).toBe("ja");
     expect(document.querySelector<HTMLSelectElement>("#targetLang")!.value).toBe("en");
-    expect(document.querySelector<HTMLSelectElement>("#provider")!.value).toBe("deepseek");
+    expect(document.querySelector<HTMLSelectElement>("#provider")!.value).toBe("anthropic-compatible");
   });
 
   it.each([true, false])("reveals the saved value %s after a delayed settings read", async (enabled) => {

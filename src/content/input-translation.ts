@@ -79,7 +79,12 @@ let running = false;
 export async function translateFocusedInput(): Promise<void> {
   if (running) return;
   const target = findInputTarget();
-  if (!target) { showNotice("请先点进要翻译的输入框，再按快捷键。", true); return; }
+  if (!target) {
+    const active = deepActiveElement();
+    console.debug("WuPage input translation: no editable target", { active: active?.tagName, id: active?.id, editable: (active as HTMLElement | null)?.isContentEditable });
+    showNotice("请先点进要翻译的输入框，再按快捷键。", true);
+    return;
+  }
   const source = readSource(target);
   if (!source.text.trim()) { showNotice("输入框里没有可翻译的文字。", true); return; }
   running = true;
